@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import Room from './pages/Room';
 import OAuth2Redirect from './pages/OAuth2Redirect';
 import LandingPage from './landing/LandingPage';
+import Profile from './pages/Profile';
 
 const PrivateRoute = ({ children }) => {
     const token = localStorage.getItem('token');
@@ -36,6 +37,14 @@ function App() {
                     element={
                         <PrivateRoute>
                             <Room />
+                        </PrivateRoute>
+                    } 
+                />
+                <Route 
+                    path="/profile" 
+                    element={
+                        <PrivateRoute>
+                            <Profile />
                         </PrivateRoute>
                     } 
                 />

@@ -60,4 +60,12 @@ public class ViewController {
         model.addAttribute("username", userDetails.getUsername());
         return "room";
     }
+    @GetMapping("/profile")
+    public String profile(Model model, @AuthenticationPrincipal UserDetails userDetails) {
+        if (userDetails == null) {
+            return "redirect:/login";
+        }
+        model.addAttribute("username", userDetails.getUsername());
+        return "profile";
+    }
 }

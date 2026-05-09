@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Profile', content=~{::content})}">
+<head></head>
+<body>
+    <div th:fragment="content" class="w-full flex-grow relative">
+        <!-- The React App (Profile) will mount here -->
+        <div id="app-root" class="w-full min-h-screen"></div>
+        
+        <!-- Pass user data to React if needed, though we can fetch via API too -->
+        <script th:inline="javascript">
+            window.USER_USERNAME = /*[[${username}]]*/ 'User';
+        </script>
+    </div>
+</body>
+</html>

@@ -25,4 +25,17 @@ public class User {
 
     @Enumerated(EnumType.STRING)
     private AuthProvider provider;
+
+    @Lob
+    @Column(name = "profile_image")
+    private byte[] profileImage;
+
+    @Column(name = "profile_image_content_type")
+    private String profileImageContentType;
+
+    @Column(name = "profile_image_file_name")
+    private String profileImageFileName;
+
+    @Column(name = "profile_image_updated_at")
+    private java.time.LocalDateTime profileImageUpdatedAt;
 }
