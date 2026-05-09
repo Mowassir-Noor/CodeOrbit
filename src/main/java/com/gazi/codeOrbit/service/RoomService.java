@@ -143,4 +143,18 @@ public class RoomService {
         // Delete the room
         roomRepository.delete(room);
     }
+
+    @Transactional
+    public Room renameRoom(String roomId, String newName, Long requesterId) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Room not found"));
+
+        // Only owner can rename
+        if (!room.getOwnerId().equals(requesterId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the room owner can rename the room");
+        }
+
+        room.setName(newName);
+        return roomRepository.save(room);
+    }
 }

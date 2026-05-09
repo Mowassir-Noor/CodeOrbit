@@ -56,6 +56,15 @@ public class RoomController {
         return ResponseEntity.ok().build();
     }
 
+    @PatchMapping("/{id}/rename")
+    public ResponseEntity<Room> renameRoom(
+            @PathVariable String id,
+            @RequestBody String newName,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        return ResponseEntity.ok(roomService.renameRoom(id, newName, userId));
+    }
+
     // Room membership endpoints
     @PostMapping("/{roomId}/members")
     public ResponseEntity<Void> addMember(

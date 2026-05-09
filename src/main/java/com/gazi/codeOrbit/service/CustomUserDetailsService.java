@@ -26,7 +26,12 @@ public class CustomUserDetailsService implements UserDetailsService {
         return new org.springframework.security.core.userdetails.User(
                 user.getUsername(),
                 user.getPassword() != null ? user.getPassword() : "",
-                Collections.emptyList()
-        );
+                Collections.emptyList());
+    }
+
+    public Long getUserId(String username) {
+        return userRepository.findByUsername(username)
+                .map(User::getId)
+                .orElse(null);
     }
 }

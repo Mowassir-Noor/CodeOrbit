@@ -6,6 +6,7 @@ import com.gazi.codeOrbit.dto.RegisterRequest;
 import com.gazi.codeOrbit.entity.User;
 import com.gazi.codeOrbit.enums.AuthProvider;
 import com.gazi.codeOrbit.repository.UserRepository;
+import com.gazi.codeOrbit.service.CustomUserDetailsService;
 import com.gazi.codeOrbit.util.JwtUtils;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -30,7 +31,7 @@ public class AuthController {
     private final UserDetailsService userDetailsService;
 
     public AuthController(AuthenticationManager authenticationManager, UserRepository userRepository,
-                          PasswordEncoder passwordEncoder, JwtUtils jwtUtils, UserDetailsService userDetailsService) {
+            PasswordEncoder passwordEncoder, JwtUtils jwtUtils, UserDetailsService userDetailsService) {
         this.authenticationManager = authenticationManager;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
@@ -61,11 +62,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
         final UserDetails userDetails = userDetailsService.loadUserByUsername(request.getUsername());
-        final String jwt = jwtUtils.generateToken(userDetails);
+        final Long userId = ((CustomUserDetailsService) userDetailsService).getUserId(request.getUsername());
+        final String jwt = jwtUtils.generateToken(userDetails, userId);
 
         return ResponseEntity.ok(new AuthResponse(jwt));
     }
@@ -89,7 +90,7 @@ public class AuthController {
         }
 
         final UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
-        final String jwt = jwtUtils.generateToken(userDetails);
+        final String jwt = jwtUtils.generateToken(userDetails, user.getId());
 
         String redirectUrl = "http://localhost:5173/oauth2-redirect?token=" + jwt + "&username=" + user.getUsername();
         return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)

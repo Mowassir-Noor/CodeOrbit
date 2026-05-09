@@ -83,18 +83,25 @@ const Dashboard = () => {
     const [showJoin, setShowJoin]      = useState(false);
     const [error, setError]            = useState('');
     const [creating, setCreating]      = useState(false);
+    const [currentUserId, setCurrentUserId] = useState(null);
     const navigate = useNavigate();
 
     const username = localStorage.getItem('username') || 'User';
+    const token = localStorage.getItem('token');
 
     const fetchRooms = useCallback(async () => {
         try {
             const res = await roomService.getRooms();
             setRooms(res.data);
+            // Decode token to get user ID
+            if (token) {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                setCurrentUserId(payload.userId || null);
+            }
         } catch {
             setError('Failed to load rooms.');
         }
-    }, []);
+    }, [token]);
 
     useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
@@ -244,7 +251,25 @@ const Dashboard = () => {
                             <RoomCard
                                 key={room.id}
                                 room={room}
+                                isOwner={room.ownerId === currentUserId}
                                 onJoin={() => navigate(`/room/${room.id}`)}
+                                onDelete={async () => {
+                                    if (!confirm(`Delete "${room.name}"? This cannot be undone.`)) return;
+                                    try {
+                                        await roomService.deleteRoom(room.id);
+                                        setRooms(prev => prev.filter(r => r.id !== room.id));
+                                    } catch {
+                                        setError('Failed to delete room.');
+                                    }
+                                }}
+                                onRename={async (newName) => {
+                                    try {
+                                        const res = await roomService.renameRoom(room.id, newName);
+                                        setRooms(prev => prev.map(r => r.id === room.id ? res.data : r));
+                                    } catch {
+                                        setError('Failed to rename room.');
+                                    }
+                                }}
                             />
                         ))}
                     </div>
@@ -263,12 +288,22 @@ const Dashboard = () => {
 };
 
 // ── Room Card ────────────────────────────────────────────────────────────────
-const RoomCard = ({ room, onJoin }) => {
+const RoomCard = ({ room, isOwner, onJoin, onDelete, onRename }) => {
     const [hovered, setHovered] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [renameValue, setRenameValue] = useState(room.name);
 
     const date = room.createdAt
         ? new Date(room.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
         : '—';
+
+    const handleRenameSubmit = async (e) => {
+        e.preventDefault();
+        if (renameValue.trim() && renameValue !== room.name) {
+            await onRename(renameValue.trim());
+        }
+        setEditing(false);
+    };
 
     return (
         <div
@@ -278,17 +313,53 @@ const RoomCard = ({ room, onJoin }) => {
         >
             <div style={s.cardTop}>
                 <span style={s.cardIcon}>⬡</span>
-                <span style={s.cardId}>#{room.id}</span>
+                <span style={s.cardId}>#{room.id.slice(0, 8)}...</span>
             </div>
-            <h3 style={s.cardName}>{room.name}</h3>
+
+            {editing ? (
+                <form onSubmit={handleRenameSubmit} style={s.renameForm}>
+                    <input
+                        type="text"
+                        value={renameValue}
+                        onChange={e => setRenameValue(e.target.value)}
+                        style={s.renameInput}
+                        autoFocus
+                        onBlur={() => { setEditing(false); setRenameValue(room.name); }}
+                    />
+                </form>
+            ) : (
+                <h3 style={s.cardName} onDoubleClick={() => isOwner && setEditing(true)}>{room.name}</h3>
+            )}
+
             <p style={s.cardDate}>Created {date}</p>
-            <button
-                id={`join-room-${room.id}-btn`}
-                style={s.cardBtn}
-                onClick={onJoin}
-            >
-                Open Room →
-            </button>
+
+            <div style={s.cardActions}>
+                <button
+                    id={`join-room-${room.id}-btn`}
+                    style={s.cardBtn}
+                    onClick={onJoin}
+                >
+                    Open Room →
+                </button>
+                {isOwner && (
+                    <>
+                        <button
+                            style={s.renameBtn}
+                            onClick={() => setEditing(true)}
+                            title="Rename"
+                        >
+                            ✎
+                        </button>
+                        <button
+                            style={s.deleteBtn}
+                            onClick={onDelete}
+                            title="Delete"
+                        >
+                            🗑
+                        </button>
+                    </>
+                )}
+            </div>
         </div>
     );
 };
@@ -458,6 +529,28 @@ const s = {
         border: 'none', backgroundColor: '#569cd6',
         color: '#0d0d0f', fontSize: '13px', fontWeight: 600,
         cursor: 'pointer', fontFamily: 'inherit', width: '100%',
+    },
+    cardActions: {
+        display: 'flex', gap: '8px', marginTop: '10px',
+    },
+    renameBtn: {
+        padding: '8px 12px', borderRadius: '8px',
+        border: '1px solid #3c3c4e', backgroundColor: '#1e1e22',
+        color: '#9cdcfe', fontSize: '13px',
+        cursor: 'pointer', fontFamily: 'inherit',
+    },
+    deleteBtn: {
+        padding: '8px 12px', borderRadius: '8px',
+        border: '1px solid #5a2020', backgroundColor: '#2d1a1a',
+        color: '#f48771', fontSize: '13px',
+        cursor: 'pointer', fontFamily: 'inherit',
+    },
+    renameForm: { margin: '4px 0 0' },
+    renameInput: {
+        width: '100%', padding: '6px 10px', borderRadius: '6px',
+        border: '1px solid #569cd6', backgroundColor: '#1e1e22',
+        color: '#e1e4e8', fontSize: '14px', fontFamily: 'inherit',
+        outline: 'none',
     },
 };
 

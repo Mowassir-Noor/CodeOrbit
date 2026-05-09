@@ -25,6 +25,10 @@ export const roomService = {
     createRoom: (roomData) => api.post('/api/rooms', roomData.name, {
         headers: { 'Content-Type': 'text/plain' }
     }),
+    deleteRoom: (id) => api.delete(`/api/rooms/${id}`),
+    renameRoom: (id, newName) => api.patch(`/api/rooms/${id}/rename`, newName, {
+        headers: { 'Content-Type': 'text/plain' }
+    }),
     joinRoom: (roomId) => api.post(`/api/rooms/${roomId}/join`),
     checkAccess: (roomId) => api.get(`/api/rooms/${roomId}/access`),
 };
