@@ -14,8 +14,9 @@ COPY pom.xml ./
 RUN mvn dependency:go-offline || true
 COPY src ./src
 # Create static directory and copy frontend build output into Spring Boot
-RUN mkdir -p src/main/resources/static
-COPY --from=build-frontend /app/frontend/dist ./src/main/resources/static
+# Note: Vite outDir in this project points to '../src/main/resources/static/dist'
+RUN mkdir -p src/main/resources/static/dist
+COPY --from=build-frontend /app/src/main/resources/static/dist ./src/main/resources/static/dist
 # Package the application (skipping tests for faster production builds)
 RUN mvn clean package -DskipTests
 
