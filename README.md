@@ -13,6 +13,7 @@
 ## Features
 
 - **Real-time collaboration** — Monaco Editor synced keystroke-by-keystroke over WebSockets (STOMP)
+- **Stunning 3D landing page** — Interactive Spline-based 3D background with GSAP-animated keycaps
 - **VS Code–style file explorer** — hierarchical folders, inline rename (F2), drag-and-drop move, context menu, file-type icons
 - **Recursive folder operations** — create, rename, move, and delete folders with all descendants in one action
 - **Live filesystem sync** — every create/rename/move/delete is broadcast to all room members in real-time via `/topic/fs/{roomId}`
@@ -156,6 +157,8 @@ Event types: `FILE_CREATED` · `FILE_RENAMED` · `FILE_DELETED` · `FILE_MOVED` 
 | ORM | Spring Data JPA / Hibernate |
 | Database | PostgreSQL |
 | Frontend | React 18, Vite 5 |
+| 3D Graphics | Spline + @splinetool/react-spline |
+| Animations | GSAP (GreenSock Animation Platform) |
 | Editor | Monaco Editor |
 | Terminal | xterm.js + FitAddon |
 | Execution | WebContainer API |

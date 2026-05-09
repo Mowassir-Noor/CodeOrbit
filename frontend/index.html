@@ -3,20 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CodeOrbit - Collaborative Editor</title>
+    <title>CodeOrbit — Real-time Collaborative Browser IDE</title>
+    <meta name="description" content="CodeOrbit is a real-time collaborative browser IDE. Write, share, and run multi-language code with your team, right in the browser." />
+    <meta name="keywords" content="CodeOrbit, collaborative IDE, code editor, real-time collaboration, browser IDE, Monaco Editor, WebSockets" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <style>
-      body { margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
-      #root { height: 100vh; width: 100vw; }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: sans-serif; }
+      /* Allow scrolling on landing, lock on IDE pages */
+      #root { min-height: 100vh; width: 100vw; }
     </style>
   </head>
   <body>
     <div id="root"></div>
-    <!-- 
-      Note: This frontend is designed to be built with a tool like Vite or Webpack.
-      In a production environment, you would use:
-      npm install
-      npm run build
-    -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

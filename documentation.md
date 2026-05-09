@@ -136,7 +136,8 @@ components/
   ├── Editor.jsx          # Collaborative Monaco Editor (STOMP)
   ├── FileTree.jsx        # VS Code-style recursive tree explorer
   ├── TabBar.jsx          # Closable editor tabs with dirty state
-  └── TerminalPanel.jsx   # WebContainer shell + xterm.js
+  ├── TerminalPanel.jsx   # WebContainer shell + xterm.js
+  └── SplineBackground.jsx # 3D landing page with animated keycaps
 
 hooks/
   ├── useBackendRunner.js # Multi-language execution via backend API
@@ -470,6 +471,11 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 - Sends code to `POST /api/execute`
 - Writes output directly to xterm.js (bypassing WebContainer shell)
 - Handles execution status and error display
+
+### `SplineBackground.jsx`
+- Renders the interactive 3D landing page background using `@splinetool/react-spline`
+- **Keycap Reveal Animation**: Finds 3D objects named `"keycap"`, `"keycap-desktop"`, and `"keycap-mobile"` and reveals them using a staggered GSAP bounce-in effect (`y: 200 → 50`) on mount.
+- **Dynamic Transforms**: Updates 3D object properties based on window size and device type.
 
 ---
 

@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Room from './pages/Room';
 import OAuth2Redirect from './pages/OAuth2Redirect';
+import LandingPage from './landing/LandingPage';
 
 const PrivateRoute = ({ children }) => {
     const token = localStorage.getItem('token');
@@ -15,6 +16,7 @@ function App() {
     return (
         <Router>
             <Routes>
+                <Route path="/" element={<LandingPage />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/oauth2-redirect" element={<OAuth2Redirect />} />
                 <Route path="/register" element={<Register />} />
@@ -34,7 +36,6 @@ function App() {
                         </PrivateRoute>
                     } 
                 />
-                <Route path="/" element={<Navigate to="/dashboard" />} />
             </Routes>
         </Router>
     );
