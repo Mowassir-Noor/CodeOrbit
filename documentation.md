@@ -101,6 +101,7 @@ dto/
 entity/
   ├── User.java                       # User profile and credentials
   ├── Room.java                       # Room metadata (UUID id)
+  ├── RoomMember.java                 # Room membership (user-room many-to-many)
   └── ProjectFile.java                # Hierarchical node (file or folder)
 
 enums/
@@ -113,6 +114,7 @@ model/
 
 repository/
   ├── ProjectFileRepository.java      # Includes bulk path update + prefix delete
+  ├── RoomMemberRepository.java       # Room membership queries
   ├── RoomRepository.java
   └── UserRepository.java
 
@@ -293,6 +295,18 @@ CREATE TABLE rooms (
   created_at TIMESTAMP
 );
 
+-- Room Membership (many-to-many)
+CREATE TABLE room_members (
+  id         BIGSERIAL PRIMARY KEY,
+  room_id    VARCHAR   NOT NULL REFERENCES rooms(id),
+  user_id    BIGINT    NOT NULL REFERENCES users(id),
+  joined_at  TIMESTAMP,
+  UNIQUE (room_id, user_id)
+);
+
+CREATE INDEX idx_rm_room ON room_members (room_id);
+CREATE INDEX idx_rm_user ON room_members (user_id);
+
 -- Files & Folders (adjacency list)
 CREATE TABLE project_files (
   id           BIGSERIAL PRIMARY KEY,
@@ -327,9 +341,21 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 ### Rooms
 | Method | Path | Description |
 |---|---|---|
-| GET  | `/api/rooms` | List rooms for authenticated user |
-| GET  | `/api/rooms/{id}` | Get room by ID |
-| POST | `/api/rooms` | Create room (body: plain text name) |
+| GET  | `/api/rooms` | List **my** rooms (membership-based) |
+| GET  | `/api/rooms/{id}` | Get room by ID (member only) |
+| POST | `/api/rooms` | Create room (creator auto-added as member) |
+| DELETE | `/api/rooms/{id}` | Delete room (owner only) |
+| POST | `/api/rooms/{roomId}/join` | Join a room by link |
+| GET | `/api/rooms/{roomId}/access` | Check if user has room access |
+| POST | `/api/rooms/{roomId}/members` | Add member (existing members only) |
+| DELETE | `/api/rooms/{roomId}/members/{userId}` | Remove member (owner only) |
+| GET | `/api/rooms/{roomId}/members` | List room members |
+
+**Access Control:**
+- Users can only access rooms where they are a member (via `room_members` table)
+- Room creator is automatically added as a member
+- Non-members get `403 Forbidden` when trying to access room resources
+- Filesystem and WebSocket endpoints also enforce membership checks
 
 ### Filesystem
 | Method | Path | Body | Description |

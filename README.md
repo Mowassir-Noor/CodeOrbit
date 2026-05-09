@@ -17,9 +17,10 @@
 - **Recursive folder operations** — create, rename, move, and delete folders with all descendants in one action
 - **Live filesystem sync** — every create/rename/move/delete is broadcast to all room members in real-time via `/topic/fs/{roomId}`
 - **Multi-language code execution** — Backend sandbox supporting Python, JavaScript, TypeScript, C, C++, Rust, Go, and Java with xterm.js terminal output
+- **Room access control** — Users can only access rooms they're members of; shareable join-by-link
 - **Closable editor tabs** — with dirty-state indicator and middle-click close
 - **JWT + Google OAuth2 authentication**
-- **Room sharing** — share a UUID room link with teammates
+- **Room sharing** — share a UUID room link; users can join and become members
 
 ---
 
@@ -86,10 +87,10 @@ codeOrbit/
 │   ├── config/         SecurityConfig, WebSocketConfig, JwtFilter
 │   ├── controller/     AuthController, RoomController, ProjectFileController, CodeController, CodeExecutionController
 │   ├── dto/            CreateNodeRequest, RenameRequest, MoveRequest, AuthResponse, ExecuteRequest, ExecuteResponse
-│   ├── entity/         User, Room, ProjectFile
+│   ├── entity/         User, Room, RoomMember, ProjectFile
 │   ├── enums/          FileType (FILE|DIRECTORY), AuthProvider
 │   ├── model/          CodeMessage, FileSystemEvent
-│   ├── repository/     ProjectFileRepository (bulk path updates, prefix delete)
+│   ├── repository/     ProjectFileRepository, RoomMemberRepository, RoomRepository
 │   ├── service/        CodeExecutionService, ProjectFileService, RoomService
 │   └── util/           JwtUtils
 │
@@ -108,15 +109,19 @@ codeOrbit/
 |---|---|---|
 | POST | `/api/auth/login` | Login → JWT |
 | POST | `/api/auth/register` | Register |
-| GET | `/api/rooms` | List your rooms |
+| GET | `/api/rooms` | List **my** rooms (membership-based) |
 | POST | `/api/rooms` | Create a room |
-| GET | `/api/files/{roomId}` | Get all nodes (flat list) |
-| POST | `/api/files/{roomId}/nodes` | Create file or folder |
-| PATCH | `/api/files/nodes/{id}/rename` | Rename (cascades children) |
-| PATCH | `/api/files/nodes/{id}/move` | Move to new parent |
-| DELETE | `/api/files/nodes/{id}` | Delete (recursive for folders) |
+| POST | `/api/rooms/{roomId}/join` | Join a room by link |
+| GET | `/api/rooms/{roomId}/access` | Check room access |
+| GET | `/api/files/{roomId}` | Get all nodes (member only) |
+| POST | `/api/files/{roomId}/nodes` | Create file or folder (member only) |
+| PATCH | `/api/files/nodes/{id}/rename` | Rename (member only) |
+| PATCH | `/api/files/nodes/{id}/move` | Move to new parent (member only) |
+| DELETE | `/api/files/nodes/{id}` | Delete (member only) |
 | POST | `/api/execute` | Execute code (multi-language sandbox) |
 | GET | `/api/execute/languages` | List supported languages |
+
+> **Room Access Control:** All room endpoints enforce membership. Non-members receive `403 Forbidden`.
 
 ---
 
