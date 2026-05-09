@@ -1,12 +1,17 @@
 package com.gazi.codeOrbit.entity;
 
+import com.gazi.codeOrbit.enums.FileType;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "project_files", uniqueConstraints = {
-    @UniqueConstraint(columnNames = {"roomId", "filePath"})
+@Table(name = "project_files", indexes = {
+        @Index(name = "idx_pf_room", columnList = "roomId"),
+        @Index(name = "idx_pf_parent", columnList = "parentId"),
+        @Index(name = "idx_pf_path", columnList = "filePath")
+}, uniqueConstraints = {
+        @UniqueConstraint(columnNames = { "roomId", "filePath" })
 })
 @Data
 @NoArgsConstructor
@@ -20,8 +25,21 @@ public class ProjectFile {
     @Column(nullable = false)
     private String roomId;
 
+    /** Full virtual path: e.g. src/components/Button.jsx */
     @Column(nullable = false)
     private String filePath;
+
+    /** Just the filename/dirname segment, e.g. Button.jsx */
+    @Column(nullable = false)
+    private String name;
+
+    /** Null = root level entry */
+    private Long parentId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private FileType fileType = FileType.FILE;
 
     @Column(columnDefinition = "TEXT")
     private String content;

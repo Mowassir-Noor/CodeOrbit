@@ -11,23 +11,62 @@ let bootPromise = null;
 const TerminalPanel = React.forwardRef(({ files }, ref) => {
     const terminalRef = useRef(null);
     const [status, setStatus] = useState('Booting WebContainer...');
+    const [shellReady, setShellReady] = useState(false);
     const termInstance = useRef(null);
     const fitAddon = useRef(null);
     const shellProcess = useRef(null);
 
     React.useImperativeHandle(ref, () => ({
         runCommand: (cmd) => {
-            if (shellProcess.current) {
+            if (shellProcess.current && shellReady) {
                 const writer = shellProcess.current.input.getWriter();
                 writer.write(cmd + '\n');
                 writer.releaseLock();
+                return true;
             }
+            console.warn('Terminal not ready, cannot run command:', cmd);
+            return false;
+        },
+        clear: () => {
+            termInstance.current?.clear?.();
+        },
+        // Expose xterm instance for direct writing
+        get term() {
+            return termInstance.current;
+        },
+        get _term() {
+            return termInstance.current;
         },
         writeFile: async (path, content) => {
-            if (webcontainerInstance) {
+            if (!webcontainerInstance) throw new Error('WebContainer not ready');
+            try {
                 await webcontainerInstance.fs.writeFile(path, content);
+                console.log('Wrote file:', path);
+                return true;
+            } catch (err) {
+                console.error('Failed to write file:', path, err);
+                throw err;
             }
-        }
+        },
+        mkdir: async (path) => {
+            if (webcontainerInstance) {
+                try { await webcontainerInstance.fs.mkdir(path, { recursive: true }); } catch (_) {}
+            }
+        },
+        removeFile: async (path) => {
+            if (webcontainerInstance) {
+                try { await webcontainerInstance.fs.rm(path, { recursive: true }); } catch (_) {}
+            }
+        },
+        renameFile: async (oldPath, newPath) => {
+            if (webcontainerInstance) {
+                try {
+                    const content = await webcontainerInstance.fs.readFile(oldPath, 'utf-8');
+                    await webcontainerInstance.fs.writeFile(newPath, content);
+                    await webcontainerInstance.fs.rm(oldPath, { recursive: true });
+                } catch (_) {}
+            }
+        },
     }));
 
     useEffect(() => {
@@ -67,13 +106,24 @@ const TerminalPanel = React.forwardRef(({ files }, ref) => {
 
             // Start a bash shell
             const process = await webcontainerInstance.spawn('jsh');
+
+            // Handle both stdout and stderr
             process.output.pipeTo(new WritableStream({
                 write(data) {
                     term.write(data);
                 }
             }));
 
+            // Also capture errors
+            process.exit.then((code) => {
+                if (code !== 0) {
+                    term.write(`\r\nProcess exited with code ${code}\r\n`);
+                }
+            });
+
             shellProcess.current = process;
+            setShellReady(true);
+            setStatus('Shell ready');
 
             // Send input from terminal to process
             term.onData((data) => {
@@ -82,20 +132,28 @@ const TerminalPanel = React.forwardRef(({ files }, ref) => {
                 writer.releaseLock();
             });
 
-            // Handle resize
-            const onResize = () => {
-                fit.fit();
-                process.resize({ cols: term.cols, rows: term.rows });
-            };
-            window.addEventListener('resize', onResize);
-            onResize();
+            // Expose term for direct access by runner
+            shellProcess.current._term = term;
         };
 
         boot();
 
         return () => {
             if (termInstance.current) {
-                termInstance.current.dispose();
+                try {
+                    termInstance.current.dispose();
+                } catch (e) {
+                    // Ignore disposal errors
+                }
+                termInstance.current = null;
+            }
+            if (shellProcess.current) {
+                try {
+                    shellProcess.current.kill?.();
+                } catch (e) {
+                    // Ignore
+                }
+                shellProcess.current = null;
             }
         };
     }, []);

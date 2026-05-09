@@ -28,9 +28,31 @@ export const roomService = {
 };
 
 export const projectFileService = {
-    getFiles: (roomId) => api.get(`/api/files/${roomId}`),
-    saveFile: (roomId, filePath, content) => api.post(`/api/files/${roomId}?filePath=${encodeURIComponent(filePath)}`, content, { headers: { 'Content-Type': 'text/plain' } }),
-    deleteFile: (roomId, filePath) => api.delete(`/api/files/${roomId}?filePath=${encodeURIComponent(filePath)}`)
+    getFiles:   (roomId) => api.get(`/api/files/${roomId}`),
+    saveFile:   (roomId, filePath, content) => api.post(
+        `/api/files/${roomId}?filePath=${encodeURIComponent(filePath)}`,
+        content,
+        { headers: { 'Content-Type': 'text/plain' } }
+    ),
+    deleteFile: (roomId, filePath) => api.delete(`/api/files/${roomId}?filePath=${encodeURIComponent(filePath)}`),
+
+    createNode: (roomId, { name, fileType, parentId }) =>
+        api.post(`/api/files/${roomId}/nodes`, { name, fileType, parentId: parentId ?? null }),
+
+    renameNode: (id, newName) =>
+        api.patch(`/api/files/nodes/${id}/rename`, { newName }),
+
+    moveNode: (id, targetParentId) =>
+        api.patch(`/api/files/nodes/${id}/move`, { targetParentId: targetParentId ?? null }),
+
+    deleteNode: (id) =>
+        api.delete(`/api/files/nodes/${id}`),
+
+    executeCode: (language, code, fileName, stdin, timeoutSeconds) =>
+        api.post('/api/execute', { language, code, fileName, stdin, timeoutSeconds }),
+
+    getSupportedLanguages: () =>
+        api.get('/api/execute/languages'),
 };
 
 export default api;

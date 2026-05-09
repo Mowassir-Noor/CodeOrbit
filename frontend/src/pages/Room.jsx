@@ -1,150 +1,221 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '../components/Editor';
 import FileTree from '../components/FileTree';
+import TabBar from '../components/TabBar';
 import TerminalPanel from '../components/TerminalPanel';
-import { projectFileService } from '../services/api';
+import { useFileSystem } from '../hooks/useFileSystem';
+import { useBackendRunner, LANGUAGE_CONFIG } from '../hooks/useBackendRunner';
 
 const Room = () => {
-    const { roomId }  = useParams();
-    const navigate    = useNavigate();
+    const { roomId } = useParams();
+    const navigate   = useNavigate();
+
     const terminalRef = useRef(null);
-    const editorRef = useRef(null);
-    const [connected, setConnected] = useState(false);
-    const [files, setFiles] = useState([]);
-    const [selectedFile, setSelectedFile] = useState(null);
+    const editorRef   = useRef(null);
 
-    React.useEffect(() => {
-        if (!roomId) return;
-        projectFileService.getFiles(roomId).then(res => {
-            setFiles(res.data);
-            if (res.data.length > 0) {
-                setSelectedFile(res.data[0].filePath);
+    const [connected, setConnected]   = useState(false);
+    const [activeFile, setActiveFile] = useState(null);
+    const [openTabs, setOpenTabs]     = useState([]);
+    const [dirtyTabs, setDirtyTabs]   = useState(new Set());
+
+    const { nodes, tree, createNode, renameNode, moveNode, deleteNode } = useFileSystem(roomId);
+
+    // Only FILE nodes (not DIRECTORY) are valid to open in editor
+    const fileNodes = nodes.filter(n => n.fileType !== 'DIRECTORY');
+
+    // ── Tab management ────────────────────────────────────────────────────────
+
+    const openFile = useCallback((filePath) => {
+        const node = nodes.find(n => n.filePath === filePath);
+        if (!node || node.fileType === 'DIRECTORY') return;
+
+        setOpenTabs(prev => {
+            if (prev.some(t => t.filePath === filePath)) return prev;
+            return [...prev, { filePath, name: node.name }];
+        });
+        setActiveFile(filePath);
+    }, [nodes]);
+
+    const closeTab = useCallback((filePath) => {
+        setOpenTabs(prev => {
+            const next = prev.filter(t => t.filePath !== filePath);
+            if (activeFile === filePath) {
+                const idx = prev.findIndex(t => t.filePath === filePath);
+                const fallback = next[Math.max(0, idx - 1)];
+                setActiveFile(fallback?.filePath ?? null);
             }
-        }).catch(err => console.error("Failed to fetch files", err));
-    }, [roomId]);
+            return next;
+        });
+        setDirtyTabs(prev => { const n = new Set(prev); n.delete(filePath); return n; });
+    }, [activeFile]);
 
-    const handleCreateFile = async (filePath) => {
-        if (files.find(f => f.filePath === filePath)) return;
-        await projectFileService.saveFile(roomId, filePath, '');
-        const newFiles = [...files, { filePath, content: '' }];
-        setFiles(newFiles);
-        setSelectedFile(filePath);
-    };
-
-    const handleDeleteFile = async (filePath) => {
-        await projectFileService.deleteFile(roomId, filePath);
-        const newFiles = files.filter(f => f.filePath !== filePath);
-        setFiles(newFiles);
-        if (selectedFile === filePath) {
-            setSelectedFile(newFiles.length > 0 ? newFiles[0].filePath : null);
+    // Close tabs that no longer exist (after delete/rename)
+    const syncTabsAfterEvent = useCallback((deletedPath, newPath) => {
+        setOpenTabs(prev => {
+            return prev
+                .filter(t => !t.filePath.startsWith(deletedPath + '/') && t.filePath !== deletedPath)
+                .map(t => {
+                    if (newPath && t.filePath === deletedPath) return { ...t, filePath: newPath, name: newPath.split('/').pop() };
+                    if (newPath && t.filePath.startsWith(deletedPath + '/')) {
+                        const updated = t.filePath.replace(deletedPath, newPath);
+                        return { ...t, filePath: updated, name: updated.split('/').pop() };
+                    }
+                    return t;
+                });
+        });
+        if (activeFile === deletedPath) {
+            setActiveFile(newPath ?? null);
         }
-    };
-    
+    }, [activeFile]);
+
+    // ── Wrapped FS ops that also sync tabs + WebContainer ─────────────────────
+
+    const handleCreate = useCallback(async (roomId, opts) => {
+        const node = await createNode(roomId, opts);
+        if (node?.fileType === 'DIRECTORY') {
+            terminalRef.current?.mkdir(node.filePath);
+        } else if (node?.fileType === 'FILE') {
+            terminalRef.current?.writeFile(node.filePath, '');
+        }
+        return node;
+    }, [createNode]);
+
+    const handleRename = useCallback(async (id, newName) => {
+        const node = nodes.find(n => n.id === id);
+        const updated = await renameNode(id, newName);
+        if (node) {
+            syncTabsAfterEvent(node.filePath, updated.filePath);
+            terminalRef.current?.renameFile(node.filePath, updated.filePath);
+        }
+        return updated;
+    }, [nodes, renameNode, syncTabsAfterEvent]);
+
+    const handleDelete = useCallback(async (id) => {
+        const node = nodes.find(n => n.id === id);
+        await deleteNode(id);
+        if (node) {
+            syncTabsAfterEvent(node.filePath, null);
+            terminalRef.current?.removeFile(node.filePath);
+        }
+    }, [nodes, deleteNode, syncTabsAfterEvent]);
+
+    // ── Backend multi-language runner ────────────────────────────────────────
+    const runner = useBackendRunner(terminalRef);
+
+    // ── Run code ──────────────────────────────────────────────────────────────
+
     const handleRunCode = async () => {
-        if (!selectedFile || !terminalRef.current || !editorRef.current) return;
-        
-        // 1. Get latest content from editor
+        if (!activeFile) {
+            alert('No file selected. Open a file first.');
+            return;
+        }
+        if (!editorRef.current) {
+            alert('Editor not ready.');
+            return;
+        }
+
         const content = editorRef.current.getValue();
-        
-        // 2. Write to WebContainer via terminalRef
-        await terminalRef.current.writeFile(selectedFile, content);
-        
-        // 3. Trigger execution
-        const ext = selectedFile.split('.').pop();
-        if (ext === 'js') {
-            terminalRef.current.runCommand(`node ${selectedFile}`);
-        } else if (ext === 'py') {
-            terminalRef.current.runCommand(`python3 ${selectedFile}`);
-        } else {
-            terminalRef.current.runCommand(`./${selectedFile}`);
+        const result = await runner.execute(activeFile, content);
+
+        if (!result.success) {
+            console.error('Execution failed:', result.error);
         }
     };
 
     return (
-        <div style={styles.container}>
+        <div style={st.container}>
             {/* ── Navbar ── */}
-            <nav style={styles.navbar}>
-                <button
-                    id="back-to-dashboard"
-                    onClick={() => navigate('/dashboard')}
-                    style={styles.backButton}
-                >
+            <nav style={st.navbar}>
+                <button id="back-to-dashboard" onClick={() => navigate('/dashboard')} style={st.backButton}>
                     ← Dashboard
                 </button>
-
-                <div style={styles.roomInfo}>
-                    <span style={styles.roomIcon}>⬡</span>
-                    <span style={styles.roomLabel}>Room</span>
-                    <code style={styles.roomId}>{roomId}</code>
+                <div style={st.roomInfo}>
+                    <span style={st.roomIcon}>⬡</span>
+                    <span style={st.roomLabel}>Room</span>
+                    <code style={st.roomId}>{roomId}</code>
                 </div>
-
-                <div style={styles.navActions}>
+                <div style={st.navActions}>
                     <button
                         id="share-room-btn"
-                        onClick={() => {
-                            navigator.clipboard.writeText(roomId);
-                            alert('Room ID copied to clipboard!');
-                        }}
-                        style={styles.shareButton}
+                        onClick={() => { navigator.clipboard.writeText(roomId); alert('Room ID copied!'); }}
+                        style={st.shareButton}
                     >
                         Share Room
                     </button>
-                    <div style={connected ? styles.statusOnline : styles.statusOffline}>
-                        <span style={styles.statusDot} />
+                    <div style={connected ? st.statusOnline : st.statusOffline}>
+                        <span style={st.statusDot} />
                         {connected ? 'Live' : 'Connecting…'}
                     </div>
                 </div>
             </nav>
 
             {/* ── IDE Layout ── */}
-            <div style={styles.ideContainer}>
-                <FileTree 
-                    files={files}
-                    selectedFile={selectedFile}
-                    onSelectFile={setSelectedFile}
-                    onCreateFile={handleCreateFile}
-                    onDeleteFile={handleDeleteFile}
+            <div style={st.ideContainer}>
+                {/* Sidebar */}
+                <FileTree
+                    tree={tree}
+                    selectedFile={activeFile}
+                    onSelectFile={openFile}
+                    onCreate={handleCreate}
+                    onRename={handleRename}
+                    onDelete={handleDelete}
+                    onMove={moveNode}
+                    roomId={roomId}
                 />
-                <div style={styles.mainArea}>
-                    <div style={styles.toolbar}>
-                        <div style={styles.fileName}>
-                            {selectedFile || 'No file selected'}
+
+                {/* Main area */}
+                <div style={st.mainArea}>
+                    {/* Tab bar */}
+                    <TabBar
+                        tabs={openTabs}
+                        activeTab={activeFile}
+                        dirtyTabs={dirtyTabs}
+                        onSelect={setActiveFile}
+                        onClose={closeTab}
+                    />
+
+                    {/* Toolbar */}
+                    <div style={st.toolbar}>
+                        <div style={st.currentPath}>
+                            {activeFile || 'No file selected'}
                         </div>
-                        <div style={styles.actions}>
-                            <button
-                                id="run-code-btn"
-                                onClick={handleRunCode}
-                                style={styles.runButton}
-                                disabled={!selectedFile}
-                            >
-                                ▶ Run
-                            </button>
-                        </div>
+                        <button
+                            id="run-code-btn"
+                            onClick={handleRunCode}
+                            style={st.runButton}
+                            disabled={!activeFile}
+                        >
+                            ▶ Run
+                        </button>
                     </div>
-                    <div style={styles.editorWrapper}>
-                        {selectedFile ? (
+
+                    {/* Editor */}
+                    <div style={st.editorWrapper}>
+                        {activeFile ? (
                             <Editor
                                 ref={editorRef}
                                 roomId={roomId}
-                                filePath={selectedFile}
+                                filePath={activeFile}
                                 onConnectionChange={setConnected}
                             />
                         ) : (
-                            <div style={styles.noFileSelected}>Select or create a file to start coding.</div>
+                            <div style={st.noFile}>
+                                <div style={st.noFileIcon}>⬡</div>
+                                <div>Select or create a file to start coding</div>
+                            </div>
                         )}
                     </div>
-                    <TerminalPanel ref={terminalRef} files={files} />
+
+                    {/* Terminal */}
+                    <TerminalPanel ref={terminalRef} files={fileNodes} />
                 </div>
             </div>
         </div>
     );
 };
 
-// ─────────────────────────────────────────────
-// Styles
-// ─────────────────────────────────────────────
-const styles = {
+const st = {
     container: {
         display: 'flex',
         flexDirection: 'column',
@@ -174,7 +245,6 @@ const styles = {
         cursor: 'pointer',
         fontSize: '13px',
         fontFamily: 'inherit',
-        transition: 'background 0.15s',
     },
     roomInfo: {
         display: 'flex',
@@ -182,14 +252,8 @@ const styles = {
         gap: '8px',
         fontSize: '14px',
     },
-    roomIcon: {
-        fontSize: '18px',
-        color: '#569cd6',
-    },
-    roomLabel: {
-        color: '#858585',
-        fontWeight: 500,
-    },
+    roomIcon: { fontSize: '18px', color: '#569cd6' },
+    roomLabel: { color: '#858585', fontWeight: 500 },
     roomId: {
         backgroundColor: '#2d2d2d',
         border: '1px solid #3c3c3c',
@@ -199,51 +263,7 @@ const styles = {
         color: '#9cdcfe',
         letterSpacing: '0.5px',
     },
-    statusOnline: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        fontSize: '12px',
-        color: '#4ec994',
-        fontWeight: 500,
-    },
-    statusOffline: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        fontSize: '12px',
-        color: '#858585',
-        fontWeight: 500,
-    },
-    statusDot: {
-        width: '7px',
-        height: '7px',
-        borderRadius: '50%',
-        backgroundColor: 'currentColor',
-        display: 'inline-block',
-    },
-    ideContainer: {
-        display: 'flex',
-        flex: 1,
-        overflow: 'hidden',
-    },
-    mainArea: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-    },
-    editorWrapper: {
-        flex: 1,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    navActions: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-    },
+    navActions: { display: 'flex', alignItems: 'center', gap: '12px' },
     shareButton: {
         padding: '5px 12px',
         borderRadius: '6px',
@@ -253,24 +273,25 @@ const styles = {
         cursor: 'pointer',
         fontSize: '12px',
         fontFamily: 'inherit',
-        transition: 'background 0.15s',
     },
+    statusOnline: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4ec994', fontWeight: 500 },
+    statusOffline: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#858585', fontWeight: 500 },
+    statusDot: { width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'currentColor', display: 'inline-block' },
+    ideContainer: { display: 'flex', flex: 1, overflow: 'hidden' },
+    mainArea: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
     toolbar: {
         height: '35px',
-        backgroundColor: '#252526',
+        backgroundColor: '#1e1e1e',
         borderBottom: '1px solid #3c3c3c',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
         padding: '0 12px',
+        flexShrink: 0,
     },
-    fileName: {
-        fontSize: '12px',
-        color: '#9cdcfe',
-        fontFamily: 'monospace',
-    },
+    currentPath: { fontSize: '12px', color: '#858585', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
     runButton: {
-        padding: '4px 12px',
+        padding: '4px 14px',
         borderRadius: '4px',
         border: 'none',
         backgroundColor: '#4ec9b0',
@@ -278,18 +299,20 @@ const styles = {
         fontSize: '11px',
         fontWeight: 'bold',
         cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '4px',
+        flexShrink: 0,
     },
-    noFileSelected: {
+    editorWrapper: { flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' },
+    noFile: {
         flex: 1,
         display: 'flex',
-        justifyContent: 'center',
+        flexDirection: 'column',
         alignItems: 'center',
-        color: '#858585',
+        justifyContent: 'center',
+        gap: '12px',
+        color: '#555',
         fontSize: '14px',
-    }
+    },
+    noFileIcon: { fontSize: '48px', color: '#2a2a2e' },
 };
 
 export default Room;
