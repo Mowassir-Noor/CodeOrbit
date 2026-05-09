@@ -14,6 +14,7 @@
 
 - **Real-time collaboration** — Monaco Editor synced keystroke-by-keystroke over WebSockets (STOMP)
 - **Stunning 3D landing page** — Interactive Spline-based 3D background with GSAP-animated keycaps
+- **Futuristic glassmorphic Profile Page** — Animated GSAP components, statistics, timeline, and BLOB profile image uploads
 - **VS Code–style file explorer** — hierarchical folders, inline rename (F2), drag-and-drop move, context menu, file-type icons
 - **Recursive folder operations** — create, rename, move, and delete folders with all descendants in one action
 - **Live filesystem sync** — every create/rename/move/delete is broadcast to all room members in real-time via `/topic/fs/{roomId}`
@@ -88,7 +89,7 @@ Browser (Thymeleaf Shell + React Views)
 codeOrbit/
 ├── src/main/java/com/gazi/codeOrbit/
 │   ├── config/         SecurityConfig, WebSocketConfig, JwtFilter
-│   ├── controller/     AuthController, RoomController, ProjectFileController, CodeController, ViewController
+│   ├── controller/     AuthController, RoomController, ProjectFileController, CodeController, ViewController, ProfileApiController
 │   ├── dto/            CreateNodeRequest, RenameRequest, MoveRequest, AuthResponse, ExecuteRequest, ExecuteResponse
 │   ├── entity/         User, Room, RoomMember, ProjectFile
 │   ├── enums/          FileType (FILE|DIRECTORY), AuthProvider
@@ -100,12 +101,12 @@ codeOrbit/
 ├── src/main/resources/templates/
 │   ├── auth/           login.html, register.html
 │   ├── fragments/      layout.html
-│   └──                 dashboard.html, room.html
+│   └──                 dashboard.html, room.html, profile.html
 │
 └── frontend/src/
     ├── components/     Editor, FileTree, TabBar, ContextMenu, TerminalPanel
     ├── hooks/          useFileSystem (FS state), useBackendRunner (execution)
-    ├── pages/          Room, Dashboard, OAuth2Redirect
+    ├── pages/          Room, Dashboard, Profile, OAuth2Redirect
     └── services/       api.js (Axios + all FS + execution endpoints)
 ```
 
@@ -128,6 +129,7 @@ codeOrbit/
 | DELETE | `/api/files/nodes/{id}` | Delete (member only) |
 | POST | `/api/execute` | Execute code (multi-language sandbox) |
 | GET | `/api/execute/languages` | List supported languages |
+| GET/POST | `/api/profile/*` | Get/Update user profile info & image |
 
 > **Room Access Control:** All room endpoints enforce membership. Non-members receive `403 Forbidden`.
 

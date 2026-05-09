@@ -67,6 +67,7 @@ Browser (Spring Boot Thymeleaf Shell + React Fragments)
 | Framework | React 18 |
 | Styling | Tailwind CSS |
 | Interactivity | Alpine.js (for simple shell interactions) |
+| Animations | GSAP (GreenSock Animation Platform) |
 | Editor | Monaco Editor (`@monaco-editor/react`) |
 | Execution | WebContainer API (StackBlitz) |
 | Terminal | xterm.js + FitAddon |
@@ -90,9 +91,10 @@ controller/
   ├── AuthController.java             # POST /api/auth/login|register
   ├── CodeController.java             # WS /app/code.send → /topic/code/{roomId}
   ├── CodeExecutionController.java    # POST /api/execute
+  ├── ProfileApiController.java       # Profile image and stats endpoints
   ├── ProjectFileController.java      # Full filesystem REST API
   ├── RoomController.java             # Room create/list/get
-  └── ViewController.java             # Thymeleaf view routing (/login, /register, /dashboard, /room/*)
+  └── ViewController.java             # Thymeleaf view routing (/login, /register, /dashboard, /room/*, /profile)
 
 dto/
   ├── CreateNodeRequest.java          # name + fileType + parentId
@@ -105,7 +107,7 @@ dto/
   └── RegisterRequest.java
 
 entity/
-  ├── User.java                       # User profile and credentials
+  ├── User.java                       # User profile, credentials, and BLOB image
   ├── Room.java                       # Room metadata (UUID id)
   ├── RoomMember.java                 # Room membership (user-room many-to-many)
   └── ProjectFile.java                # Hierarchical node (file or folder)
@@ -127,6 +129,7 @@ repository/
 service/
   ├── CodeExecutionService.java       # Multi-language execution sandbox
   ├── CustomUserDetailsService.java
+  ├── ProfileService.java             # Profile image BLOB storage logic
   ├── ProjectFileService.java         # Full FS logic + WS broadcast
   └── RoomService.java
 
@@ -141,6 +144,7 @@ resources/
       ├── fragments/
       │   └── layout.html             # Global shell layout
       ├── dashboard.html              # React mounting point for Dashboard
+      ├── profile.html                # React mounting point for Profile
       └── room.html                   # React mounting point for Room IDE
 ```
 
@@ -162,6 +166,7 @@ hooks/
 pages/
   ├── Dashboard.jsx       # Room list, create, join by ID (mounted via dashboard.html)
   ├── OAuth2Redirect.jsx  # Handles Google login token redirect
+  ├── Profile.jsx         # User profile page (mounted via profile.html)
   └── Room.jsx            # Full IDE layout (mounted via room.html)
 
 services/
@@ -295,11 +300,15 @@ CodeOrbit features a **backend code execution service** that runs code in isolat
 ```sql
 -- Users
 CREATE TABLE users (
-  id         BIGSERIAL PRIMARY KEY,
-  username   VARCHAR NOT NULL UNIQUE,
-  email      VARCHAR NOT NULL UNIQUE,
-  password   VARCHAR,
-  provider   VARCHAR NOT NULL DEFAULT 'LOCAL'
+  id                  BIGSERIAL PRIMARY KEY,
+  username            VARCHAR NOT NULL UNIQUE,
+  email               VARCHAR NOT NULL UNIQUE,
+  password            VARCHAR,
+  provider            VARCHAR NOT NULL DEFAULT 'LOCAL',
+  profile_image       OID,        -- BLOB storage
+  profile_image_type  VARCHAR,
+  profile_image_name  VARCHAR,
+  profile_updated_at  TIMESTAMP
 );
 
 -- Rooms
@@ -365,6 +374,16 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 | POST | `/api/rooms/{roomId}/members` | Add member (existing members only) |
 | DELETE | `/api/rooms/{roomId}/members/{userId}` | Remove member (owner only) |
 | GET | `/api/rooms/{roomId}/members` | List room members |
+
+### Profile
+| Method | Path | Description |
+|---|---|---|
+| GET | `/api/profile` | Get current user's profile info |
+| GET | `/api/profile/image/{username}` | Get user's profile image (binary) |
+| POST | `/api/profile/image` | Upload profile image (multipart form) |
+| DELETE | `/api/profile/image` | Delete profile image |
+| GET | `/api/profile/stats` | Get user statistics (mocked) |
+| GET | `/api/profile/activity` | Get user activity timeline (mocked) |
 
 **Access Control:**
 - Users can only access rooms where they are a member (via `room_members` table)
