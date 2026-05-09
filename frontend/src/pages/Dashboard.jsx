@@ -16,10 +16,20 @@ const JoinModal = ({ onClose, onJoin }) => {
         setLoading(true);
         setError('');
         try {
-            await roomService.getRoom(id);   // validates the room exists
+            // First, try to join the room (become a member)
+            await roomService.joinRoom(id);
             onJoin(id);
-        } catch {
-            setError('Room not found. Check the ID and try again.');
+        } catch (err) {
+            if (err.response?.status === 409) {
+                // Already a member, just navigate
+                onJoin(id);
+            } else if (err.response?.status === 404) {
+                setError('Room not found. Check the ID and try again.');
+            } else if (err.response?.status === 403) {
+                setError('You do not have permission to join this room.');
+            } else {
+                setError('Failed to join room. Please try again.');
+            }
         } finally {
             setLoading(false);
         }

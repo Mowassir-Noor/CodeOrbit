@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Editor from '../components/Editor';
 import FileTree from '../components/FileTree';
@@ -6,6 +6,7 @@ import TabBar from '../components/TabBar';
 import TerminalPanel from '../components/TerminalPanel';
 import { useFileSystem } from '../hooks/useFileSystem';
 import { useBackendRunner, LANGUAGE_CONFIG } from '../hooks/useBackendRunner';
+import { roomService } from '../services/api';
 
 const Room = () => {
     const { roomId } = useParams();
@@ -18,8 +19,113 @@ const Room = () => {
     const [activeFile, setActiveFile] = useState(null);
     const [openTabs, setOpenTabs]     = useState([]);
     const [dirtyTabs, setDirtyTabs]   = useState(new Set());
+    const [accessState, setAccessState] = useState('checking'); // 'checking' | 'granted' | 'denied'
+    const [joining, setJoining]       = useState(false);
 
-    const { nodes, tree, createNode, renameNode, moveNode, deleteNode } = useFileSystem(roomId);
+    // Check room access on load
+    useEffect(() => {
+        const checkAccess = async () => {
+            try {
+                await roomService.getRoom(roomId);
+                setAccessState('granted');
+            } catch (err) {
+                if (err.response?.status === 403) {
+                    setAccessState('denied');
+                } else if (err.response?.status === 404) {
+                    setAccessState('notfound');
+                } else {
+                    setAccessState('error');
+                }
+            }
+        };
+        checkAccess();
+    }, [roomId]);
+
+    const handleJoinRoom = async () => {
+        setJoining(true);
+        try {
+            await roomService.joinRoom(roomId);
+            setAccessState('granted');
+        } catch (err) {
+            if (err.response?.status === 409) {
+                // Already a member
+                setAccessState('granted');
+            } else {
+                alert('Failed to join room. Please try again.');
+            }
+        } finally {
+            setJoining(false);
+        }
+    };
+
+    // Always call hooks (React Rules of Hooks)
+    const { nodes, tree, createNode, renameNode, moveNode, deleteNode } = useFileSystem(
+        accessState === 'granted' ? roomId : null
+    );
+
+    // Show access dialog if not granted
+    if (accessState === 'checking') {
+        return (
+            <div style={st.loadingPage}>
+                <div style={st.loadingBox}>Checking access...</div>
+            </div>
+        );
+    }
+
+    if (accessState === 'notfound') {
+        return (
+            <div style={st.loadingPage}>
+                <div style={st.errorBox}>
+                    <h3>Room Not Found</h3>
+                    <p>This room does not exist.</p>
+                    <button onClick={() => navigate('/dashboard')} style={st.primaryBtn}>
+                        Back to Dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    if (accessState === 'denied') {
+        return (
+            <div style={st.loadingPage}>
+                <div style={st.errorBox}>
+                    <h3>Join Room</h3>
+                    <p>You are not a member of this room yet.</p>
+                    <div style={st.buttonRow}>
+                        <button onClick={() => navigate('/dashboard')} style={st.secondaryBtn}>
+                            Back
+                        </button>
+                        <button onClick={handleJoinRoom} disabled={joining} style={st.primaryBtn}>
+                            {joining ? 'Joining...' : 'Join Room'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // If we get here, access is granted - render the full IDE
+    return <RoomIDE 
+        roomId={roomId}
+        nodes={nodes}
+        tree={tree}
+        createNode={createNode}
+        renameNode={renameNode}
+        moveNode={moveNode}
+        deleteNode={deleteNode}
+    />;
+};
+
+// Separate component for the IDE to avoid hooks issues
+const RoomIDE = ({ roomId, nodes, tree, createNode, renameNode, moveNode, deleteNode }) => {
+    const navigate = useNavigate();
+    const terminalRef = useRef(null);
+    const editorRef = useRef(null);
+    const [connected, setConnected] = useState(false);
+    const [activeFile, setActiveFile] = useState(null);
+    const [openTabs, setOpenTabs] = useState([]);
+    const [dirtyTabs, setDirtyTabs] = useState(new Set());
 
     // Only FILE nodes (not DIRECTORY) are valid to open in editor
     const fileNodes = nodes.filter(n => n.fileType !== 'DIRECTORY');
@@ -313,6 +419,56 @@ const st = {
         fontSize: '14px',
     },
     noFileIcon: { fontSize: '48px', color: '#2a2a2e' },
+
+    // Access control dialogs
+    loadingPage: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        backgroundColor: '#1e1e1e',
+        color: '#d4d4d4',
+    },
+    loadingBox: {
+        padding: '2rem',
+        fontSize: '16px',
+        color: '#858585',
+    },
+    errorBox: {
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '1rem',
+        padding: '2rem 3rem',
+        backgroundColor: '#252526',
+        borderRadius: '8px',
+        border: '1px solid #3c3c3c',
+    },
+    buttonRow: {
+        display: 'flex',
+        gap: '1rem',
+        marginTop: '1rem',
+    },
+    primaryBtn: {
+        padding: '10px 24px',
+        borderRadius: '6px',
+        border: 'none',
+        backgroundColor: '#4ec9b0',
+        color: '#1e1e1e',
+        fontSize: '14px',
+        fontWeight: '600',
+        cursor: 'pointer',
+        ':disabled': { opacity: 0.6, cursor: 'not-allowed' },
+    },
+    secondaryBtn: {
+        padding: '10px 24px',
+        borderRadius: '6px',
+        border: '1px solid #3c3c3c',
+        backgroundColor: 'transparent',
+        color: '#9cdcfe',
+        fontSize: '14px',
+        cursor: 'pointer',
+    },
 };
 
 export default Room;

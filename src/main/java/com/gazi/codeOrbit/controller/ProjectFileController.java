@@ -4,9 +4,14 @@ import com.gazi.codeOrbit.dto.CreateNodeRequest;
 import com.gazi.codeOrbit.dto.MoveRequest;
 import com.gazi.codeOrbit.dto.RenameRequest;
 import com.gazi.codeOrbit.entity.ProjectFile;
+import com.gazi.codeOrbit.entity.User;
+import com.gazi.codeOrbit.repository.UserRepository;
 import com.gazi.codeOrbit.service.ProjectFileService;
+import com.gazi.codeOrbit.service.RoomService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,16 +21,32 @@ import java.util.List;
 public class ProjectFileController {
 
     private final ProjectFileService projectFileService;
+    private final RoomService roomService;
+    private final UserRepository userRepository;
 
-    public ProjectFileController(ProjectFileService projectFileService) {
+    public ProjectFileController(ProjectFileService projectFileService,
+            RoomService roomService,
+            UserRepository userRepository) {
         this.projectFileService = projectFileService;
+        this.roomService = roomService;
+        this.userRepository = userRepository;
+    }
+
+    private Long getCurrentUserId(UserDetails userDetails) {
+        User user = userRepository.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return user.getId();
     }
 
     /**
      * Get all nodes (files + folders) for a room — flat list, tree built on client
      */
     @GetMapping("/{roomId}")
-    public ResponseEntity<List<ProjectFile>> getFiles(@PathVariable String roomId) {
+    public ResponseEntity<List<ProjectFile>> getFiles(@PathVariable String roomId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        // Check access
+        roomService.getRoomById(roomId, userId); // throws if no access
         return ResponseEntity.ok(projectFileService.getFilesByRoomId(roomId));
     }
 
@@ -34,7 +55,10 @@ public class ProjectFileController {
     public ResponseEntity<Void> saveFile(
             @PathVariable String roomId,
             @RequestParam String filePath,
-            @RequestBody(required = false) String content) {
+            @RequestBody(required = false) String content,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        roomService.getRoomById(roomId, userId); // throws if no access
         projectFileService.saveFile(roomId, filePath, content == null ? "" : content);
         return ResponseEntity.ok().build();
     }
@@ -43,7 +67,10 @@ public class ProjectFileController {
     @PostMapping("/{roomId}/nodes")
     public ResponseEntity<ProjectFile> createNode(
             @PathVariable String roomId,
-            @Valid @RequestBody CreateNodeRequest req) {
+            @Valid @RequestBody CreateNodeRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        roomService.getRoomById(roomId, userId); // throws if no access
         return ResponseEntity.ok(projectFileService.createNode(roomId, req));
     }
 
@@ -51,7 +78,12 @@ public class ProjectFileController {
     @PatchMapping("/nodes/{id}/rename")
     public ResponseEntity<ProjectFile> renameNode(
             @PathVariable Long id,
-            @Valid @RequestBody RenameRequest req) {
+            @Valid @RequestBody RenameRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        // Get the file to find its room, then check access
+        ProjectFile file = projectFileService.getNodeById(id);
+        roomService.getRoomById(file.getRoomId(), userId); // throws if no access
         return ResponseEntity.ok(projectFileService.renameNode(id, req.getNewName()));
     }
 
@@ -59,13 +91,21 @@ public class ProjectFileController {
     @PatchMapping("/nodes/{id}/move")
     public ResponseEntity<ProjectFile> moveNode(
             @PathVariable Long id,
-            @RequestBody MoveRequest req) {
+            @RequestBody MoveRequest req,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        ProjectFile file = projectFileService.getNodeById(id);
+        roomService.getRoomById(file.getRoomId(), userId); // throws if no access
         return ResponseEntity.ok(projectFileService.moveNode(id, req.getTargetParentId()));
     }
 
     /** Delete a node by ID (recursively if folder) */
     @DeleteMapping("/nodes/{id}")
-    public ResponseEntity<Void> deleteNode(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteNode(@PathVariable Long id,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        ProjectFile file = projectFileService.getNodeById(id);
+        roomService.getRoomById(file.getRoomId(), userId); // throws if no access
         projectFileService.deleteNode(id);
         return ResponseEntity.ok().build();
     }
@@ -74,7 +114,10 @@ public class ProjectFileController {
     @DeleteMapping("/{roomId}")
     public ResponseEntity<Void> deleteFile(
             @PathVariable String roomId,
-            @RequestParam String filePath) {
+            @RequestParam String filePath,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        roomService.getRoomById(roomId, userId); // throws if no access
         projectFileService.deleteFile(roomId, filePath);
         return ResponseEntity.ok().build();
     }

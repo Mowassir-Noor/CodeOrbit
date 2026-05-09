@@ -29,6 +29,12 @@ public class ProjectFileService {
         return repo.findByRoomId(roomId);
     }
 
+    @Transactional(readOnly = true)
+    public ProjectFile getNodeById(Long nodeId) {
+        return repo.findById(nodeId)
+                .orElseThrow(() -> new IllegalArgumentException("Node not found: " + nodeId));
+    }
+
     // ─── Legacy save (used by CodeController for content sync) ────────────────
 
     @Transactional

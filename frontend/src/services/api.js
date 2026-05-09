@@ -25,6 +25,8 @@ export const roomService = {
     createRoom: (roomData) => api.post('/api/rooms', roomData.name, {
         headers: { 'Content-Type': 'text/plain' }
     }),
+    joinRoom: (roomId) => api.post(`/api/rooms/${roomId}/join`),
+    checkAccess: (roomId) => api.get(`/api/rooms/${roomId}/access`),
 };
 
 export const projectFileService = {
