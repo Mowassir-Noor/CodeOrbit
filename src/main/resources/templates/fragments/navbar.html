@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+    <nav th:fragment="navbar" class="fixed top-0 w-full z-50 glass-dark border-b border-white/5 transition-all duration-300" x-data="{ scrolled: false }" @scroll.window="scrolled = (window.pageYOffset > 20)">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-2 cursor-pointer" onclick="window.location.href='/'">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-cyan-400 flex items-center justify-center text-white font-bold text-xl shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                    </div>
+                    <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400 tracking-tight">CodeOrbit</span>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="/#features" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Features</a>
+                        <a href="/#architecture" class="text-gray-300 hover:text-white px-3 py-2 rounded-md text-sm font-medium transition-colors">Architecture</a>
+                    </div>
+                </div>
+
+                <!-- Auth Buttons -->
+                <div class="hidden md:flex items-center gap-4" th:if="${username == null}">
+                    <a href="/login" class="text-gray-300 hover:text-white text-sm font-medium transition-colors">Sign In</a>
+                    <a href="/register" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_25px_rgba(37,99,235,0.6)]">Get Started</a>
+                </div>
+                
+                <div class="hidden md:flex items-center gap-4" th:if="${username != null}">
+                    <div class="flex items-center gap-2 text-sm text-gray-400">
+                        <div class="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold uppercase shadow-lg">
+                            <span th:text="${#strings.substring(username, 0, 1)}">U</span>
+                        </div>
+                        <span th:text="${username}" class="font-medium text-gray-200">User</span>
+                    </div>
+                    <a href="/dashboard" class="bg-white/10 hover:bg-white/20 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all border border-white/5">Dashboard</a>
+                    <button onclick="logout()" class="text-gray-400 hover:text-red-400 text-sm font-medium transition-colors">Logout</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <script th:fragment="logout-script">
+        function logout() {
+            document.cookie = "token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+            window.location.href = "/login";
+        }
+    </script>
+</body>
+</html>

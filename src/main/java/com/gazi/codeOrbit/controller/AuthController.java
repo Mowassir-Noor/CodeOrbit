@@ -8,6 +8,8 @@ import com.gazi.codeOrbit.enums.AuthProvider;
 import com.gazi.codeOrbit.repository.UserRepository;
 import com.gazi.codeOrbit.service.CustomUserDetailsService;
 import com.gazi.codeOrbit.util.JwtUtils;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -68,7 +70,16 @@ public class AuthController {
         final Long userId = ((CustomUserDetailsService) userDetailsService).getUserId(request.getUsername());
         final String jwt = jwtUtils.generateToken(userDetails, userId);
 
-        return ResponseEntity.ok(new AuthResponse(jwt));
+        ResponseCookie cookie = ResponseCookie.from("token", jwt)
+                .httpOnly(false) // Allow JS to read if needed, or true if strict
+                .secure(false) // Should be true in prod
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(new AuthResponse(jwt));
     }
 
     @GetMapping("/oauth2/success")
@@ -92,9 +103,17 @@ public class AuthController {
         final UserDetails userDetails = userDetailsService.loadUserByUsername(user.getUsername());
         final String jwt = jwtUtils.generateToken(userDetails, user.getId());
 
-        String redirectUrl = "http://localhost:5173/oauth2-redirect?token=" + jwt + "&username=" + user.getUsername();
+        ResponseCookie cookie = ResponseCookie.from("token", jwt)
+                .httpOnly(false)
+                .secure(false)
+                .path("/")
+                .maxAge(7 * 24 * 60 * 60)
+                .build();
+
+        String redirectUrl = "/dashboard";
         return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
                 .location(java.net.URI.create(redirectUrl))
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
                 .build();
     }
 }

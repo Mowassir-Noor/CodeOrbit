@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: layout(title='Dashboard', content=~{::content})}">
+<head></head>
+<body>
+    <div th:fragment="content" class="w-full h-full flex-grow relative">
+        <!-- The React App (Dashboard) will mount here -->
+        <div id="app-root" class="w-full h-full"></div>
+    </div>
+</body>
+</html>

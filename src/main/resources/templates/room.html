@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout_no_nav :: layout(title='Room - CodeOrbit', content=~{::content})}">
+<head></head>
+<body>
+    <div th:fragment="content" class="w-full h-full flex-grow relative overflow-hidden">
+        <!-- The React App (Room) will mount here -->
+        <div id="app-root" class="w-full h-full"></div>
+    </div>
+</body>
+</html>

@@ -42,23 +42,25 @@
 psql -U postgres -c "CREATE DATABASE codeorbit;"
 ```
 
-### 2. Backend
+### 2. Frontend Build
 
-```bash
-./mvnw spring-boot:run
-# → http://localhost:8080
-```
-
-### 3. Frontend
+Since CodeOrbit uses a hybrid architecture, the React frontend must be built and injected into the Spring Boot static resources directory.
 
 ```bash
 cd frontend
 npm install
-npm run dev
-# → http://localhost:5173
+npm run build
 ```
 
-> **Browser note**: Terminal uses WebContainers API which requires `SharedArrayBuffer`. Use **Chrome**, **Edge**, or **Firefox** (latest). The Vite dev server sets the required `COOP`/`COEP` headers automatically.
+### 3. Start the Server
+
+```bash
+cd ..
+./mvnw spring-boot:run
+# → http://localhost:8080
+```
+
+> **Browser note**: Terminal uses WebContainers API which requires `SharedArrayBuffer`. Use **Chrome**, **Edge**, or **Firefox** (latest). The Spring Boot application sets the required `COOP`/`COEP` headers automatically.
 
 > **Backend requirements** | Python 3, Node.js, GCC, G++, Rust, Go, and Java must be installed on the server for code execution.
 
@@ -67,7 +69,7 @@ npm run dev
 ## Architecture
 
 ```
-Browser (React IDE)
+Browser (Thymeleaf Shell + React Views)
   │
   ├── WebContainer API ──► in-browser Node.js runtime
   │
@@ -86,7 +88,7 @@ Browser (React IDE)
 codeOrbit/
 ├── src/main/java/com/gazi/codeOrbit/
 │   ├── config/         SecurityConfig, WebSocketConfig, JwtFilter
-│   ├── controller/     AuthController, RoomController, ProjectFileController, CodeController, CodeExecutionController
+│   ├── controller/     AuthController, RoomController, ProjectFileController, CodeController, ViewController
 │   ├── dto/            CreateNodeRequest, RenameRequest, MoveRequest, AuthResponse, ExecuteRequest, ExecuteResponse
 │   ├── entity/         User, Room, RoomMember, ProjectFile
 │   ├── enums/          FileType (FILE|DIRECTORY), AuthProvider
@@ -95,10 +97,15 @@ codeOrbit/
 │   ├── service/        CodeExecutionService, ProjectFileService, RoomService
 │   └── util/           JwtUtils
 │
+├── src/main/resources/templates/
+│   ├── auth/           login.html, register.html
+│   ├── fragments/      layout.html
+│   └──                 dashboard.html, room.html
+│
 └── frontend/src/
     ├── components/     Editor, FileTree, TabBar, ContextMenu, TerminalPanel
     ├── hooks/          useFileSystem (FS state), useBackendRunner (execution)
-    ├── pages/          Room, Dashboard, Login, Register, OAuth2Redirect
+    ├── pages/          Room, Dashboard, OAuth2Redirect
     └── services/       api.js (Axios + all FS + execution endpoints)
 ```
 
@@ -156,7 +163,7 @@ Event types: `FILE_CREATED` · `FILE_RENAMED` · `FILE_DELETED` · `FILE_MOVED` 
 | WebSocket | Spring STOMP, SockJS |
 | ORM | Spring Data JPA / Hibernate |
 | Database | PostgreSQL |
-| Frontend | React 18, Vite 5 |
+| Frontend | React 18, Vite 5, Thymeleaf, Tailwind CSS, Alpine.js |
 | 3D Graphics | Spline + @splinetool/react-spline |
 | Animations | GSAP (GreenSock Animation Platform) |
 | Editor | Monaco Editor |

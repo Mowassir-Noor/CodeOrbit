@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title} + ' — CodeOrbit'">CodeOrbit</title>
+    
+    <!-- Vite Assets -->
+    <link rel="stylesheet" th:href="@{/dist/assets/styles.css}">
+    <link rel="stylesheet" th:href="@{/dist/assets/main.css}">
+    
+    <!-- Alpine.js -->
+    <script type="module" th:src="@{/dist/assets/alpine.js}" defer></script>
+    
+    <!-- React Bundle (Vite) -->
+    <script type="module" th:src="@{/dist/assets/main.js}" defer></script>
+    
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    
+    <!-- GSAP -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+    <!-- Cross-Origin Headers for WebContainer (Handled by Spring Security/MVC usually, but good to note) -->
+</head>
+<body class="bg-[#0D0D11] text-gray-100 antialiased selection:bg-blue-500/30 font-sans min-h-screen flex flex-col overflow-x-hidden">
+    
+    <!-- Include Navbar -->
+    <div th:replace="~{fragments/navbar :: navbar}"></div>
+
+    <!-- Main Content -->
+    <main class="flex-grow flex flex-col relative z-10" th:replace="${content}">
+        <!-- Page content injected here -->
+    </main>
+
+    <!-- Include Footer -->
+    <div th:replace="~{fragments/footer :: footer}"></div>
+
+</body>
+</html>

@@ -1,0 +1,94 @@
+{
+  "_howler-j6EFlT-7.js": {
+    "file": "assets/howler-j6EFlT-7.js",
+    "name": "howler",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.jsx"
+    ]
+  },
+  "node_modules/@splinetool/react-spline/dist/react-spline.js": {
+    "file": "assets/react-spline-BFOO33i9.js",
+    "name": "react-spline",
+    "src": "node_modules/@splinetool/react-spline/dist/react-spline.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "src/main.jsx"
+    ],
+    "dynamicImports": [
+      "node_modules/@splinetool/runtime/build/navmesh.js",
+      "node_modules/@splinetool/runtime/build/physics.js",
+      "node_modules/@splinetool/runtime/build/process.js",
+      "node_modules/@splinetool/runtime/build/boolean.js",
+      "_howler-j6EFlT-7.js",
+      "node_modules/@splinetool/runtime/build/opentype.js",
+      "node_modules/@splinetool/runtime/build/ui.js",
+      "node_modules/@splinetool/runtime/build/gaussian-splat-compression.js"
+    ]
+  },
+  "node_modules/@splinetool/runtime/build/boolean.js": {
+    "file": "assets/boolean-M1LVEoHW.js",
+    "name": "boolean",
+    "src": "node_modules/@splinetool/runtime/build/boolean.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/@splinetool/runtime/build/gaussian-splat-compression.js": {
+    "file": "assets/gaussian-splat-compression-BquiPG4d.js",
+    "name": "gaussian-splat-compression",
+    "src": "node_modules/@splinetool/runtime/build/gaussian-splat-compression.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/@splinetool/runtime/build/navmesh.js": {
+    "file": "assets/navmesh-D19wqnly.js",
+    "name": "navmesh",
+    "src": "node_modules/@splinetool/runtime/build/navmesh.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/@splinetool/runtime/build/opentype.js": {
+    "file": "assets/opentype-DOjxwhSl.js",
+    "name": "opentype",
+    "src": "node_modules/@splinetool/runtime/build/opentype.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/@splinetool/runtime/build/physics.js": {
+    "file": "assets/physics-CNKp4iG8.js",
+    "name": "physics",
+    "src": "node_modules/@splinetool/runtime/build/physics.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/@splinetool/runtime/build/process.js": {
+    "file": "assets/process-CUFQKizh.js",
+    "name": "process",
+    "src": "node_modules/@splinetool/runtime/build/process.js",
+    "isDynamicEntry": true
+  },
+  "node_modules/@splinetool/runtime/build/ui.js": {
+    "file": "assets/ui-D5nRU96G.js",
+    "name": "ui",
+    "src": "node_modules/@splinetool/runtime/build/ui.js",
+    "isDynamicEntry": true
+  },
+  "src/alpine-init.js": {
+    "file": "assets/alpine.js",
+    "name": "alpine",
+    "src": "src/alpine-init.js",
+    "isEntry": true
+  },
+  "src/index.css": {
+    "file": "assets/styles.css",
+    "src": "src/index.css",
+    "isEntry": true
+  },
+  "src/main.jsx": {
+    "file": "assets/main.js",
+    "name": "main",
+    "src": "src/main.jsx",
+    "isEntry": true,
+    "dynamicImports": [
+      "node_modules/@splinetool/react-spline/dist/react-spline.js"
+    ],
+    "css": [
+      "assets/main.css"
+    ]
+  }
+}

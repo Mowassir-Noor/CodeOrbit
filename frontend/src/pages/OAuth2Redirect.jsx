@@ -13,9 +13,9 @@ const OAuth2Redirect = () => {
         if (token && username) {
             localStorage.setItem('token', token);
             localStorage.setItem('username', username);
-            navigate('/dashboard');
+            window.location.href = '/dashboard';
         } else {
-            navigate('/login');
+            window.location.href = '/login';
         }
     }, [location, navigate]);
 

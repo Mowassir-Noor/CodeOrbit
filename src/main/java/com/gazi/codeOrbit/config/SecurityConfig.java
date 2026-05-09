@@ -38,7 +38,12 @@ public class SecurityConfig {
                                 new org.springframework.security.web.authentication.HttpStatusEntryPoint(
                                         org.springframework.http.HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**", "/ws/**", "/api/execute/**")
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.FORWARD, jakarta.servlet.DispatcherType.ERROR).permitAll()
+                        .requestMatchers("/", "/login", "/register", "/dashboard", "/room/**", "/error")
+                        .permitAll()
+                        .requestMatchers("/api/auth/**", "/oauth2/**", "/ws/**", "/api/execute/**")
+                        .permitAll()
+                        .requestMatchers("/dist/**", "/assets/**", "/favicon.ico", "/**/*.css", "/**/*.js")
                         .permitAll()
                         .anyRequest().authenticated())
                 .oauth2Login(oauth2 -> oauth2

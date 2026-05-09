@@ -41,33 +41,35 @@ const JoinModal = ({ onClose, onJoin }) => {
     };
 
     return (
-        <div style={modal.backdrop} onClick={handleBackdrop}>
-            <div style={modal.box}>
-                <div style={modal.header}>
-                    <span style={modal.title}>Join a Room</span>
-                    <button style={modal.close} onClick={onClose}>✕</button>
+        <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-md flex items-center justify-center p-4" onClick={handleBackdrop}>
+            <div className="glass-panel w-full max-w-md p-8 relative animate-in fade-in zoom-in duration-300">
+                <div className="flex items-center justify-between mb-2">
+                    <h2 className="text-xl font-bold text-white tracking-tight">Join a Room</h2>
+                    <button className="text-gray-400 hover:text-white transition-colors" onClick={onClose}>
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
                 </div>
-                <p style={modal.subtitle}>
+                <p className="text-sm text-gray-400 mb-6">
                     Enter the Room ID shared with you to collaborate in real-time.
                 </p>
-                <form onSubmit={handleSubmit} style={modal.form}>
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                     <input
                         id="join-room-id-input"
                         type="text"
                         placeholder="Paste Room ID (UUID)"
                         value={roomId}
                         onChange={(e) => { setRoomId(e.target.value); setError(''); }}
-                        style={modal.input}
+                        className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                         autoFocus
                     />
-                    {error && <p style={modal.error}>{error}</p>}
+                    {error && <p className="text-sm text-red-400 m-0">{error}</p>}
                     <button
                         id="join-room-confirm-btn"
                         type="submit"
-                        style={{ ...modal.btn, opacity: loading ? 0.7 : 1 }}
+                        className={`w-full bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-medium py-3 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.3)] transition-all ${loading || !roomId.trim() ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02]'}`}
                         disabled={loading || !roomId.trim()}
                     >
-                        {loading ? 'Checking…' : '→  Join Room'}
+                        {loading ? 'Checking...' : 'Join Room'}
                     </button>
                 </form>
             </div>
@@ -93,7 +95,6 @@ const Dashboard = () => {
         try {
             const res = await roomService.getRooms();
             setRooms(res.data);
-            // Decode token to get user ID
             if (token) {
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 setCurrentUserId(payload.userId || null);
@@ -115,8 +116,7 @@ const Dashboard = () => {
             setRooms(prev => [res.data, ...prev]);
             setNewRoomName('');
             setShowCreate(false);
-            // Immediately navigate into the new room
-            navigate(`/room/${res.data.id}`);
+            window.location.href = `/room/${res.data.id}`;
         } catch {
             setError('Failed to create room.');
         } finally {
@@ -124,135 +124,133 @@ const Dashboard = () => {
         }
     };
 
-    const handleLogout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('username');
-        navigate('/login');
-    };
-
-    const handleJoin = (id) => navigate(`/room/${id}`);
-
-    // ── Avatar initials ──────────────────────────────────────────────────────
-    const initials = username.slice(0, 2).toUpperCase();
+    const handleJoin = (id) => { window.location.href = `/room/${id}`; };
 
     return (
-        <div style={s.page}>
-
-            {/* ── Topbar ──────────────────────────────────────────────────── */}
-            <header style={s.topbar}>
-                <div style={s.brand}>
-                    <span style={s.brandIcon}>⬡</span>
-                    <span style={s.brandName}>CodeOrbit</span>
-                </div>
-
-                <div style={s.topActions}>
-                    {/* Join by ID */}
-                    <button
-                        id="open-join-modal-btn"
-                        style={s.joinBtn}
-                        onClick={() => setShowJoin(true)}
-                    >
-                        <span style={s.btnIcon}>⤵</span> Join Room
-                    </button>
-
-                    {/* Create room */}
-                    <button
-                        id="open-create-modal-btn"
-                        style={s.createBtn}
-                        onClick={() => setShowCreate(v => !v)}
-                    >
-                        <span style={s.btnIcon}>+</span> New Room
-                    </button>
-
-                    {/* User avatar + logout */}
-                    <div style={s.avatarGroup}>
-                        <div style={s.avatar}>{initials}</div>
-                        <button id="logout-btn" style={s.logoutBtn} onClick={handleLogout}>
-                            Sign out
-                        </button>
-                    </div>
-                </div>
-            </header>
-
-            {/* ── Create room inline panel ─────────────────────────────────── */}
-            {showCreate && (
-                <div style={s.createPanel}>
-                    <form onSubmit={handleCreateRoom} style={s.createForm}>
-                        <span style={s.createLabel}>Room name</span>
-                        <input
-                            id="new-room-name-input"
-                            type="text"
-                            placeholder="e.g. Interview Prep, Team Sprint…"
-                            value={newRoomName}
-                            onChange={e => setNewRoomName(e.target.value)}
-                            style={s.createInput}
-                            autoFocus
-                            required
-                        />
-                        <button
-                            id="create-room-submit-btn"
-                            type="submit"
-                            style={{ ...s.createSubmit, opacity: creating ? 0.7 : 1 }}
-                            disabled={creating}
-                        >
-                            {creating ? 'Creating…' : 'Create & Enter'}
-                        </button>
-                        <button
-                            type="button"
-                            style={s.createCancel}
-                            onClick={() => { setShowCreate(false); setNewRoomName(''); }}
-                        >
-                            Cancel
-                        </button>
-                    </form>
-                </div>
-            )}
+        <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
 
             {/* ── Main content ─────────────────────────────────────────────── */}
-            <main style={s.main}>
+            <main className="w-full relative z-10 flex flex-col gap-8">
 
                 {/* Welcome strip */}
-                <div style={s.welcomeStrip}>
-                    <div>
-                        <h1 style={s.greeting}>Good to see you, <span style={s.greetingName}>{username}</span></h1>
-                        <p style={s.greetingSub}>Open a room below or join one using a shared Room ID.</p>
+                <div className="glass-panel p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+                    
+                    <div className="relative z-10">
+                        <h1 className="text-3xl font-bold text-white tracking-tight mb-2">
+                            Good to see you, <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-300">{username}</span>
+                        </h1>
+                        <p className="text-gray-400 text-sm">Open a room below or join one using a shared Room ID.</p>
                     </div>
-                    <div style={s.statsRow}>
-                        <div style={s.statBox}>
-                            <span style={s.statNum}>{rooms.length}</span>
-                            <span style={s.statLabel}>Rooms</span>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-4 relative z-10 w-full md:w-auto">
+                        {/* Stats */}
+                        <div className="hidden lg:flex items-center gap-3 bg-black/40 border border-white/5 rounded-xl px-4 py-2 mr-4">
+                            <div className="w-2 h-2 rounded-full bg-green-400 shadow-[0_0_8px_rgba(74,222,128,0.8)]"></div>
+                            <span className="text-gray-300 text-sm font-medium">{rooms.length} Active Rooms</span>
                         </div>
+
+                        {/* Actions */}
+                        <button
+                            id="open-join-modal-btn"
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 font-medium transition-all flex items-center justify-center gap-2"
+                            onClick={() => setShowJoin(true)}
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+                            Join Room
+                        </button>
+                        <button
+                            id="open-create-modal-btn"
+                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-medium shadow-[0_0_15px_rgba(37,99,235,0.3)] transition-all flex items-center justify-center gap-2 hover:scale-[1.02]"
+                            onClick={() => setShowCreate(v => !v)}
+                        >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                            New Room
+                        </button>
                     </div>
                 </div>
 
+                {/* ── Create room inline panel ─────────────────────────────────── */}
+                {showCreate && (
+                    <div className="glass-panel p-6 animate-in slide-in-from-top-4 fade-in duration-300 border-l-4 border-l-cyan-400">
+                        <form onSubmit={handleCreateRoom} className="flex flex-col sm:flex-row items-end sm:items-center gap-4">
+                            <div className="flex-grow w-full">
+                                <label className="block text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Room Name</label>
+                                <input
+                                    id="new-room-name-input"
+                                    type="text"
+                                    placeholder="e.g. Interview Prep, Team Sprint..."
+                                    value={newRoomName}
+                                    onChange={e => setNewRoomName(e.target.value)}
+                                    className="w-full bg-black/40 border border-white/10 rounded-xl px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                                    autoFocus
+                                    required
+                                />
+                            </div>
+                            <div className="flex gap-3 w-full sm:w-auto">
+                                <button
+                                    type="button"
+                                    className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-white/10 hover:bg-white/5 text-gray-400 transition-colors"
+                                    onClick={() => { setShowCreate(false); setNewRoomName(''); }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    id="create-room-submit-btn"
+                                    type="submit"
+                                    className={`flex-1 sm:flex-none px-6 py-2.5 rounded-xl bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/30 font-medium transition-all ${creating ? 'opacity-50' : ''}`}
+                                    disabled={creating}
+                                >
+                                    {creating ? 'Creating...' : 'Create & Enter'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
                 {error && (
-                    <div style={s.errorBanner}>
-                        ⚠ {error}
-                        <button style={s.errorClose} onClick={() => setError('')}>✕</button>
+                    <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 flex items-center justify-between text-red-400 text-sm animate-in fade-in">
+                        <div className="flex items-center gap-2">
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            {error}
+                        </div>
+                        <button className="hover:text-red-300 transition-colors" onClick={() => setError('')}>
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                        </button>
                     </div>
                 )}
 
                 {/* Section header */}
-                <div style={s.sectionHeader}>
-                    <h2 style={s.sectionTitle}>All Rooms</h2>
-                    <button style={s.refreshBtn} onClick={fetchRooms} title="Refresh">↻</button>
+                <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-xl font-bold text-white tracking-tight flex items-center gap-3">
+                        Your Workspaces
+                        <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-xs font-medium text-gray-300 border border-white/5">{rooms.length}</span>
+                    </h2>
+                    <button className="text-gray-500 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/5" onClick={fetchRooms} title="Refresh list">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    </button>
                 </div>
 
                 {/* Room grid */}
                 {rooms.length === 0 ? (
-                    <div style={s.empty}>
-                        <span style={s.emptyIcon}>⬡</span>
-                        <p style={s.emptyText}>No rooms yet.</p>
-                        <p style={s.emptyHint}>Create one above or join by ID.</p>
+                    <div className="glass-panel p-16 flex flex-col items-center justify-center text-center border-dashed border-2 border-white/10">
+                        <div className="w-16 h-16 mb-4 rounded-2xl bg-gradient-to-tr from-blue-600/20 to-cyan-400/20 flex items-center justify-center border border-blue-500/30 text-blue-400 shadow-[0_0_30px_rgba(59,130,246,0.15)]">
+                            <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        </div>
+                        <h3 className="text-xl font-bold text-white mb-2">No active rooms</h3>
+                        <p className="text-gray-400 max-w-sm mb-6">Create a new room to start coding, or join an existing session if you have a Room ID.</p>
+                        <button className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-medium shadow-[0_0_15px_rgba(37,99,235,0.4)] transition-all" onClick={() => setShowCreate(true)}>
+                            Create First Room
+                        </button>
                     </div>
                 ) : (
-                    <div style={s.grid}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {rooms.map(room => (
                             <RoomCard
                                 key={room.id}
                                 room={room}
                                 isOwner={room.ownerId === currentUserId}
-                                onJoin={() => navigate(`/room/${room.id}`)}
+                                onJoin={() => window.location.href = `/room/${room.id}`}
                                 onDelete={async () => {
                                     if (!confirm(`Delete "${room.name}"? This cannot be undone.`)) return;
                                     try {
@@ -289,7 +287,6 @@ const Dashboard = () => {
 
 // ── Room Card ────────────────────────────────────────────────────────────────
 const RoomCard = ({ room, isOwner, onJoin, onDelete, onRename }) => {
-    const [hovered, setHovered] = useState(false);
     const [editing, setEditing] = useState(false);
     const [renameValue, setRenameValue] = useState(room.name);
 
@@ -306,293 +303,71 @@ const RoomCard = ({ room, isOwner, onJoin, onDelete, onRename }) => {
     };
 
     return (
-        <div
-            style={{ ...s.card, ...(hovered ? s.cardHover : {}) }}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-        >
-            <div style={s.cardTop}>
-                <span style={s.cardIcon}>⬡</span>
-                <span style={s.cardId}>#{room.id.slice(0, 8)}...</span>
+        <div className="glass-panel p-5 rounded-2xl flex flex-col group hover:border-blue-500/40 hover:shadow-[0_8px_30px_rgba(37,99,235,0.1)] transition-all duration-300">
+            <div className="flex items-center justify-between mb-4">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-gray-800 to-black border border-white/10 flex items-center justify-center text-blue-400 group-hover:scale-110 group-hover:text-cyan-400 transition-all duration-300 shadow-inner">
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                </div>
+                <div className="bg-black/50 border border-white/5 px-2.5 py-1 rounded-md text-xs font-mono text-gray-500">
+                    #{room.id.slice(0, 8)}
+                </div>
             </div>
 
             {editing ? (
-                <form onSubmit={handleRenameSubmit} style={s.renameForm}>
+                <form onSubmit={handleRenameSubmit} className="mb-2">
                     <input
                         type="text"
                         value={renameValue}
                         onChange={e => setRenameValue(e.target.value)}
-                        style={s.renameInput}
+                        className="w-full bg-black/40 border border-blue-500/50 rounded-lg px-3 py-1.5 text-white focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all"
                         autoFocus
                         onBlur={() => { setEditing(false); setRenameValue(room.name); }}
                     />
                 </form>
             ) : (
-                <h3 style={s.cardName} onDoubleClick={() => isOwner && setEditing(true)}>{room.name}</h3>
+                <h3 
+                    className="text-lg font-bold text-white mb-1 truncate cursor-pointer group-hover:text-blue-200 transition-colors" 
+                    onDoubleClick={() => isOwner && setEditing(true)}
+                    title={isOwner ? "Double-click to rename" : ""}
+                >
+                    {room.name}
+                </h3>
             )}
 
-            <p style={s.cardDate}>Created {date}</p>
+            <p className="text-xs text-gray-500 mb-6 flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                {date}
+            </p>
 
-            <div style={s.cardActions}>
+            <div className="mt-auto flex gap-2">
                 <button
                     id={`join-room-${room.id}-btn`}
-                    style={s.cardBtn}
+                    className="flex-1 bg-white/5 hover:bg-blue-600 text-white py-2.5 rounded-xl text-sm font-medium border border-white/10 hover:border-transparent transition-all"
                     onClick={onJoin}
                 >
-                    Open Room →
+                    Enter Room
                 </button>
                 {isOwner && (
-                    <>
+                    <div className="flex gap-1">
                         <button
-                            style={s.renameBtn}
+                            className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 transition-all"
                             onClick={() => setEditing(true)}
-                            title="Rename"
+                            title="Rename Room"
                         >
-                            ✎
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                         </button>
                         <button
-                            style={s.deleteBtn}
+                            className="p-2.5 rounded-xl bg-white/5 hover:bg-red-500/20 text-gray-400 hover:text-red-400 border border-white/10 hover:border-red-500/30 transition-all"
                             onClick={onDelete}
-                            title="Delete"
+                            title="Delete Room"
                         >
-                            🗑
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
-                    </>
+                    </div>
                 )}
             </div>
         </div>
     );
-};
-
-// ── Styles ───────────────────────────────────────────────────────────────────
-const s = {
-    page: {
-        minHeight: '100vh',
-        backgroundColor: '#0d0d0f',
-        color: '#e1e4e8',
-        fontFamily: '"Inter", -apple-system, sans-serif',
-    },
-
-    // Topbar
-    topbar: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 2rem',
-        height: '60px',
-        backgroundColor: '#161618',
-        borderBottom: '1px solid #2a2a2e',
-        position: 'sticky',
-        top: 0,
-        zIndex: 100,
-    },
-    brand: { display: 'flex', alignItems: 'center', gap: '10px' },
-    brandIcon: { fontSize: '22px', color: '#569cd6' },
-    brandName: { fontSize: '18px', fontWeight: 700, color: '#e1e4e8', letterSpacing: '-0.3px' },
-    topActions: { display: 'flex', alignItems: 'center', gap: '10px' },
-
-    joinBtn: {
-        display: 'flex', alignItems: 'center', gap: '6px',
-        padding: '7px 14px', borderRadius: '8px',
-        border: '1px solid #3c3c4e', backgroundColor: 'transparent',
-        color: '#9cdcfe', fontSize: '13px', fontWeight: 500,
-        cursor: 'pointer', fontFamily: 'inherit',
-    },
-    createBtn: {
-        display: 'flex', alignItems: 'center', gap: '6px',
-        padding: '7px 16px', borderRadius: '8px',
-        border: 'none', backgroundColor: '#569cd6',
-        color: '#0d0d0f', fontSize: '13px', fontWeight: 600,
-        cursor: 'pointer', fontFamily: 'inherit',
-    },
-    btnIcon: { fontSize: '15px', lineHeight: 1 },
-    avatarGroup: { display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '6px' },
-    avatar: {
-        width: '32px', height: '32px', borderRadius: '50%',
-        backgroundColor: '#3c4a6e', color: '#9cdcfe',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: '12px', fontWeight: 700,
-    },
-    logoutBtn: {
-        padding: '5px 10px', borderRadius: '6px',
-        border: '1px solid #2a2a2e', backgroundColor: 'transparent',
-        color: '#858585', fontSize: '12px', cursor: 'pointer', fontFamily: 'inherit',
-    },
-
-    // Create panel
-    createPanel: {
-        backgroundColor: '#161618',
-        borderBottom: '1px solid #2a2a2e',
-        padding: '14px 2rem',
-    },
-    createForm: { display: 'flex', alignItems: 'center', gap: '10px', maxWidth: '700px' },
-    createLabel: { fontSize: '13px', color: '#858585', whiteSpace: 'nowrap' },
-    createInput: {
-        flex: 1, padding: '8px 12px', borderRadius: '8px',
-        border: '1px solid #3c3c4e', backgroundColor: '#1e1e22',
-        color: '#e1e4e8', fontSize: '14px', fontFamily: 'inherit', outline: 'none',
-    },
-    createSubmit: {
-        padding: '8px 18px', borderRadius: '8px', border: 'none',
-        backgroundColor: '#4ec994', color: '#0d0d0f',
-        fontSize: '13px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-    },
-    createCancel: {
-        padding: '8px 14px', borderRadius: '8px',
-        border: '1px solid #2a2a2e', backgroundColor: 'transparent',
-        color: '#858585', fontSize: '13px', cursor: 'pointer', fontFamily: 'inherit',
-    },
-
-    // Main
-    main: { maxWidth: '1200px', margin: '0 auto', padding: '2.5rem 2rem' },
-
-    // Welcome strip
-    welcomeStrip: {
-        display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between',
-        marginBottom: '2.5rem',
-    },
-    greeting: { fontSize: '26px', fontWeight: 700, color: '#e1e4e8', margin: '0 0 6px 0' },
-    greetingName: { color: '#569cd6' },
-    greetingSub: { margin: 0, color: '#858585', fontSize: '14px' },
-    statsRow: { display: 'flex', gap: '12px' },
-    statBox: {
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        backgroundColor: '#161618', border: '1px solid #2a2a2e',
-        borderRadius: '10px', padding: '12px 20px', minWidth: '70px',
-    },
-    statNum: { fontSize: '22px', fontWeight: 700, color: '#9cdcfe' },
-    statLabel: { fontSize: '11px', color: '#858585', marginTop: '2px' },
-
-    // Error banner
-    errorBanner: {
-        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        backgroundColor: '#2d1a1a', border: '1px solid #5a2020',
-        borderRadius: '8px', padding: '10px 14px',
-        color: '#f48771', fontSize: '14px', marginBottom: '1.5rem',
-    },
-    errorClose: {
-        background: 'none', border: 'none', color: '#f48771',
-        cursor: 'pointer', fontSize: '14px', padding: '0 4px',
-    },
-
-    // Section header
-    sectionHeader: {
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '1.2rem',
-    },
-    sectionTitle: { margin: 0, fontSize: '16px', fontWeight: 600, color: '#c8c8d0' },
-    refreshBtn: {
-        background: 'none', border: 'none', color: '#569cd6',
-        fontSize: '18px', cursor: 'pointer', lineHeight: 1, padding: '4px 6px',
-    },
-
-    // Empty state
-    empty: {
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: '5rem 0', gap: '10px',
-    },
-    emptyIcon: { fontSize: '48px', color: '#2a2a2e' },
-    emptyText: { margin: 0, fontSize: '16px', color: '#555' },
-    emptyHint: { margin: 0, fontSize: '13px', color: '#444' },
-
-    // Grid
-    grid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-        gap: '1.2rem',
-    },
-
-    // Room card
-    card: {
-        backgroundColor: '#161618',
-        border: '1px solid #2a2a2e',
-        borderRadius: '12px',
-        padding: '1.4rem',
-        display: 'flex', flexDirection: 'column', gap: '8px',
-        transition: 'border-color 0.15s, transform 0.15s',
-        cursor: 'default',
-    },
-    cardHover: {
-        borderColor: '#569cd6',
-        transform: 'translateY(-2px)',
-    },
-    cardTop: { display: 'flex', alignItems: 'center', justifyContent: 'space-between' },
-    cardIcon: { fontSize: '20px', color: '#569cd6' },
-    cardId: {
-        fontSize: '11px', color: '#555', backgroundColor: '#1e1e22',
-        border: '1px solid #2a2a2e', borderRadius: '4px', padding: '2px 6px',
-    },
-    cardName: { margin: '4px 0 0', fontSize: '16px', fontWeight: 600, color: '#e1e4e8' },
-    cardDate: { margin: 0, fontSize: '12px', color: '#555' },
-    cardBtn: {
-        marginTop: '10px', padding: '8px 0', borderRadius: '8px',
-        border: 'none', backgroundColor: '#569cd6',
-        color: '#0d0d0f', fontSize: '13px', fontWeight: 600,
-        cursor: 'pointer', fontFamily: 'inherit', width: '100%',
-    },
-    cardActions: {
-        display: 'flex', gap: '8px', marginTop: '10px',
-    },
-    renameBtn: {
-        padding: '8px 12px', borderRadius: '8px',
-        border: '1px solid #3c3c4e', backgroundColor: '#1e1e22',
-        color: '#9cdcfe', fontSize: '13px',
-        cursor: 'pointer', fontFamily: 'inherit',
-    },
-    deleteBtn: {
-        padding: '8px 12px', borderRadius: '8px',
-        border: '1px solid #5a2020', backgroundColor: '#2d1a1a',
-        color: '#f48771', fontSize: '13px',
-        cursor: 'pointer', fontFamily: 'inherit',
-    },
-    renameForm: { margin: '4px 0 0' },
-    renameInput: {
-        width: '100%', padding: '6px 10px', borderRadius: '6px',
-        border: '1px solid #569cd6', backgroundColor: '#1e1e22',
-        color: '#e1e4e8', fontSize: '14px', fontFamily: 'inherit',
-        outline: 'none',
-    },
-};
-
-// ── Join Modal Styles ────────────────────────────────────────────────────────
-const modal = {
-    backdrop: {
-        position: 'fixed', inset: 0, zIndex: 999,
-        backgroundColor: 'rgba(0,0,0,0.65)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        backdropFilter: 'blur(4px)',
-    },
-    box: {
-        backgroundColor: '#161618',
-        border: '1px solid #2a2a2e',
-        borderRadius: '14px',
-        padding: '2rem',
-        width: '100%', maxWidth: '400px',
-        boxShadow: '0 24px 60px rgba(0,0,0,0.5)',
-    },
-    header: {
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: '8px',
-    },
-    title: { fontSize: '17px', fontWeight: 700, color: '#e1e4e8' },
-    close: {
-        background: 'none', border: 'none', color: '#555',
-        fontSize: '16px', cursor: 'pointer', lineHeight: 1, padding: '4px',
-    },
-    subtitle: { margin: '0 0 1.5rem', fontSize: '13px', color: '#858585' },
-    form: { display: 'flex', flexDirection: 'column', gap: '12px' },
-    input: {
-        padding: '10px 14px', borderRadius: '8px',
-        border: '1px solid #3c3c4e', backgroundColor: '#1e1e22',
-        color: '#e1e4e8', fontSize: '15px', fontFamily: 'inherit', outline: 'none',
-        MozAppearance: 'textfield',
-    },
-    error: { margin: 0, color: '#f48771', fontSize: '13px' },
-    btn: {
-        padding: '10px', borderRadius: '8px', border: 'none',
-        backgroundColor: '#569cd6', color: '#0d0d0f',
-        fontSize: '14px', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-    },
 };
 
 export default Dashboard;

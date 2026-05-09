@@ -25,7 +25,7 @@ CodeOrbit is a full-stack, real-time collaborative Integrated Development Enviro
 ## Architecture Overview
 
 ```
-Browser (React IDE)
+Browser (Spring Boot Thymeleaf Shell + React Fragments)
   │
   ├── WebContainer API (WebAssembly) ──► Node.js/Bash in-browser
   │
@@ -37,6 +37,7 @@ Browser (React IDE)
 ```
 
 **Workflow:**
+- **Hybrid Rendering**: Thymeleaf manages the global application shell and navigation layout, while React is dynamically mounted inside specific pages (Dashboard, Room) for high interactivity.
 - **Persistence**: Files and folders are stored in PostgreSQL as a parent-child adjacency list.
 - **Editor Sync**: Real-time keystrokes broadcast via `/topic/code/{roomId}` to all room members.
 - **FS Sync**: Create/rename/move/delete operations broadcast typed `FileSystemEvent` payloads via `/topic/fs/{roomId}`.
@@ -61,13 +62,17 @@ Browser (React IDE)
 ### Frontend
 | Layer | Technology |
 |---|---|
+| Architecture | Spring Boot Thymeleaf Shell + React Fragments |
+| View Engine | Thymeleaf |
 | Framework | React 18 |
+| Styling | Tailwind CSS |
+| Interactivity | Alpine.js (for simple shell interactions) |
 | Editor | Monaco Editor (`@monaco-editor/react`) |
 | Execution | WebContainer API (StackBlitz) |
 | Terminal | xterm.js + FitAddon |
 | WebSocket | `@stomp/stompjs` + SockJS-client |
 | Drag & Drop | `@dnd-kit/core` |
-| Build | Vite 5 |
+| Build | Vite 5 (outputs to Spring Boot static resources) |
 
 ---
 
@@ -86,7 +91,8 @@ controller/
   ├── CodeController.java             # WS /app/code.send → /topic/code/{roomId}
   ├── CodeExecutionController.java    # POST /api/execute
   ├── ProjectFileController.java      # Full filesystem REST API
-  └── RoomController.java             # Room create/list/get
+  ├── RoomController.java             # Room create/list/get
+  └── ViewController.java             # Thymeleaf view routing (/login, /register, /dashboard, /room/*)
 
 dto/
   ├── CreateNodeRequest.java          # name + fileType + parentId
@@ -126,6 +132,16 @@ service/
 
 util/
   └── JwtUtils.java
+
+resources/
+  └── templates/
+      ├── auth/
+      │   ├── login.html              # Spring Boot login view
+      │   └── register.html           # Spring Boot register view
+      ├── fragments/
+      │   └── layout.html             # Global shell layout
+      ├── dashboard.html              # React mounting point for Dashboard
+      └── room.html                   # React mounting point for Room IDE
 ```
 
 ### Frontend (`frontend/src/`)
@@ -144,11 +160,9 @@ hooks/
   └── useFileSystem.js    # Central FS state, buildTree(), WS subscriber
 
 pages/
-  ├── Dashboard.jsx       # Room list, create, join by ID
-  ├── Login.jsx
+  ├── Dashboard.jsx       # Room list, create, join by ID (mounted via dashboard.html)
   ├── OAuth2Redirect.jsx  # Handles Google login token redirect
-  ├── Register.jsx
-  └── Room.jsx            # Full IDE layout (tree + tabs + editor + terminal)
+  └── Room.jsx            # Full IDE layout (mounted via room.html)
 
 services/
   └── api.js              # Axios client with JWT interceptor + all FS endpoints
@@ -159,9 +173,9 @@ services/
 ## Authentication
 
 ### JWT (Local)
-1. `POST /api/auth/register` — create account
-2. `POST /api/auth/login` — returns `{ token, username }`
-3. Token stored in `localStorage`, attached as `Authorization: Bearer <token>` to every HTTP and WebSocket request.
+1. `GET /login` — Serves Thymeleaf template with Alpine.js form.
+2. `POST /api/auth/login` — JSON API returns `{ token, username }`. Form script stores in `localStorage` and redirects to `/dashboard`.
+3. React components read `localStorage` and attach as `Authorization: Bearer <token>` to every HTTP and WebSocket request.
 
 ### OAuth2 (Google)
 1. Frontend redirects to `/oauth2/authorization/google`

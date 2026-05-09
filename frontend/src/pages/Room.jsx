@@ -66,19 +66,22 @@ const Room = () => {
     // Show access dialog if not granted
     if (accessState === 'checking') {
         return (
-            <div style={st.loadingPage}>
-                <div style={st.loadingBox}>Checking access...</div>
+            <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-transparent text-white">
+                <div className="glass-panel p-8 flex items-center gap-3">
+                    <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    <span className="text-gray-400">Checking access...</span>
+                </div>
             </div>
         );
     }
 
     if (accessState === 'notfound') {
         return (
-            <div style={st.loadingPage}>
-                <div style={st.errorBox}>
-                    <h3>Room Not Found</h3>
-                    <p>This room does not exist.</p>
-                    <button onClick={() => navigate('/dashboard')} style={st.primaryBtn}>
+            <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-transparent">
+                <div className="glass-panel p-8 max-w-md w-full text-center space-y-4">
+                    <h3 className="text-xl font-semibold text-white">Room Not Found</h3>
+                    <p className="text-gray-400 text-sm">This room does not exist or has been removed.</p>
+                    <button onClick={() => window.location.href = '/dashboard'} className="mt-4 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors text-sm font-medium w-full shadow-[0_0_15px_rgba(37,99,235,0.4)]">
                         Back to Dashboard
                     </button>
                 </div>
@@ -88,15 +91,20 @@ const Room = () => {
 
     if (accessState === 'denied') {
         return (
-            <div style={st.loadingPage}>
-                <div style={st.errorBox}>
-                    <h3>Join Room</h3>
-                    <p>You are not a member of this room yet.</p>
-                    <div style={st.buttonRow}>
-                        <button onClick={() => navigate('/dashboard')} style={st.secondaryBtn}>
-                            Back
+            <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] bg-transparent">
+                <div className="glass-panel p-8 max-w-md w-full text-center space-y-6">
+                    <div className="mx-auto w-12 h-12 rounded-xl bg-gradient-to-tr from-purple-600 to-blue-500 flex items-center justify-center text-white shadow-[0_0_20px_rgba(147,51,234,0.5)]">
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path></svg>
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-semibold text-white">Join Room</h3>
+                        <p className="text-gray-400 text-sm mt-2">You are not a member of this workspace yet.</p>
+                    </div>
+                    <div className="flex gap-3 pt-2">
+                        <button onClick={() => window.location.href = '/dashboard'} className="flex-1 px-4 py-2 border border-white/10 hover:bg-white/5 text-gray-300 rounded-lg transition-colors text-sm font-medium">
+                            Cancel
                         </button>
-                        <button onClick={handleJoinRoom} disabled={joining} style={st.primaryBtn}>
+                        <button onClick={handleJoinRoom} disabled={joining} className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-all text-sm font-medium shadow-[0_0_15px_rgba(37,99,235,0.4)] hover:shadow-[0_0_20px_rgba(37,99,235,0.6)] disabled:opacity-50">
                             {joining ? 'Joining...' : 'Join Room'}
                         </button>
                     </div>
@@ -230,245 +238,122 @@ const RoomIDE = ({ roomId, nodes, tree, createNode, renameNode, moveNode, delete
     };
 
     return (
-        <div style={st.container}>
-            {/* ── Navbar ── */}
-            <nav style={st.navbar}>
-                <button id="back-to-dashboard" onClick={() => navigate('/dashboard')} style={st.backButton}>
-                    ← Dashboard
-                </button>
-                <div style={st.roomInfo}>
-                    <span style={st.roomIcon}>⬡</span>
-                    <span style={st.roomLabel}>Room</span>
-                    <code style={st.roomId}>{roomId}</code>
+        <div className="flex flex-col h-[calc(100vh-4rem)] text-gray-300 font-sans overflow-hidden">
+            {/* ── Room Info Bar ── */}
+            <div className="flex items-center justify-between px-4 py-2 bg-black/40 border-b border-white/5 backdrop-blur-md shrink-0 z-10">
+                <div className="flex items-center gap-3">
+                    <button id="back-to-dashboard" onClick={() => window.location.href = '/dashboard'} className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    </button>
+                    <div className="h-4 w-px bg-white/10"></div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-blue-500 font-bold">⬡</span>
+                        <span className="text-sm font-medium text-gray-200">Workspace</span>
+                        <code className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 text-xs tracking-wide">
+                            {roomId}
+                        </code>
+                    </div>
                 </div>
-                <div style={st.navActions}>
+                <div className="flex items-center gap-4">
+                    <div className={`flex items-center gap-2 text-xs font-medium ${connected ? 'text-green-400' : 'text-yellow-400'}`}>
+                        <span className="relative flex h-2 w-2">
+                            {connected && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>}
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${connected ? 'bg-green-500' : 'bg-yellow-500'}`}></span>
+                        </span>
+                        {connected ? 'Live Sync' : 'Connecting...'}
+                    </div>
                     <button
                         id="share-room-btn"
                         onClick={() => { navigator.clipboard.writeText(roomId); alert('Room ID copied!'); }}
-                        style={st.shareButton}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-medium text-gray-300 hover:text-white transition-colors"
                     >
-                        Share Room
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                        Share
                     </button>
-                    <div style={connected ? st.statusOnline : st.statusOffline}>
-                        <span style={st.statusDot} />
-                        {connected ? 'Live' : 'Connecting…'}
-                    </div>
                 </div>
-            </nav>
+            </div>
 
             {/* ── IDE Layout ── */}
-            <div style={st.ideContainer}>
+            <div className="flex flex-1 overflow-hidden p-2 gap-2 bg-black/20">
                 {/* Sidebar */}
-                <FileTree
-                    tree={tree}
-                    selectedFile={activeFile}
-                    onSelectFile={openFile}
-                    onCreate={handleCreate}
-                    onRename={handleRename}
-                    onDelete={handleDelete}
-                    onMove={moveNode}
-                    roomId={roomId}
-                />
+                <div className="w-64 flex flex-col shrink-0 glass-panel overflow-hidden border border-white/5 shadow-2xl rounded-xl">
+                    <FileTree
+                        tree={tree}
+                        selectedFile={activeFile}
+                        onSelectFile={openFile}
+                        onCreate={handleCreate}
+                        onRename={handleRename}
+                        onDelete={handleDelete}
+                        onMove={moveNode}
+                        roomId={roomId}
+                    />
+                </div>
 
                 {/* Main area */}
-                <div style={st.mainArea}>
-                    {/* Tab bar */}
-                    <TabBar
-                        tabs={openTabs}
-                        activeTab={activeFile}
-                        dirtyTabs={dirtyTabs}
-                        onSelect={setActiveFile}
-                        onClose={closeTab}
-                    />
-
-                    {/* Toolbar */}
-                    <div style={st.toolbar}>
-                        <div style={st.currentPath}>
-                            {activeFile || 'No file selected'}
-                        </div>
-                        <button
-                            id="run-code-btn"
-                            onClick={handleRunCode}
-                            style={st.runButton}
-                            disabled={!activeFile}
-                        >
-                            ▶ Run
-                        </button>
-                    </div>
-
-                    {/* Editor */}
-                    <div style={st.editorWrapper}>
-                        {activeFile ? (
-                            <Editor
-                                ref={editorRef}
-                                roomId={roomId}
-                                filePath={activeFile}
-                                onConnectionChange={setConnected}
+                <div className="flex-1 flex flex-col min-w-0 gap-2">
+                    
+                    {/* Editor Panel */}
+                    <div className="flex-1 glass-panel flex flex-col overflow-hidden border border-white/5 shadow-2xl rounded-xl">
+                        {/* Tab bar */}
+                        <div className="border-b border-white/5 bg-black/40 shrink-0">
+                            <TabBar
+                                tabs={openTabs}
+                                activeTab={activeFile}
+                                dirtyTabs={dirtyTabs}
+                                onSelect={setActiveFile}
+                                onClose={closeTab}
                             />
-                        ) : (
-                            <div style={st.noFile}>
-                                <div style={st.noFileIcon}>⬡</div>
-                                <div>Select or create a file to start coding</div>
+                        </div>
+
+                        {/* Toolbar */}
+                        <div className="h-10 border-b border-white/5 bg-black/20 flex items-center justify-between px-3 shrink-0">
+                            <div className="text-xs text-gray-500 font-mono flex items-center gap-2 truncate">
+                                {activeFile ? (
+                                    <>
+                                        <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                                        {activeFile}
+                                    </>
+                                ) : 'No file selected'}
                             </div>
-                        )}
+                            <button
+                                id="run-code-btn"
+                                onClick={handleRunCode}
+                                disabled={!activeFile}
+                                className="flex items-center gap-1.5 px-3 py-1 rounded bg-gradient-to-r from-green-500 to-emerald-400 hover:from-green-400 hover:to-emerald-300 text-black text-xs font-bold transition-all shadow-[0_0_10px_rgba(16,185,129,0.3)] hover:shadow-[0_0_15px_rgba(16,185,129,0.5)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path></svg>
+                                RUN
+                            </button>
+                        </div>
+
+                        {/* Editor */}
+                        <div className="flex-1 overflow-hidden flex flex-col relative bg-[#1e1e1e]/80">
+                            {activeFile ? (
+                                <Editor
+                                    ref={editorRef}
+                                    roomId={roomId}
+                                    filePath={activeFile}
+                                    onConnectionChange={setConnected}
+                                />
+                            ) : (
+                                <div className="flex-1 flex flex-col items-center justify-center gap-4 text-gray-500">
+                                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5">
+                                        <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+                                    </div>
+                                    <div className="text-sm">Select or create a file to start coding</div>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    {/* Terminal */}
-                    <TerminalPanel ref={terminalRef} files={fileNodes} />
+                    {/* Terminal Panel */}
+                    <div className="h-64 glass-panel border border-white/5 shadow-2xl rounded-xl overflow-hidden shrink-0">
+                        <TerminalPanel ref={terminalRef} files={fileNodes} />
+                    </div>
                 </div>
             </div>
         </div>
     );
-};
-
-const st = {
-    container: {
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100vh',
-        backgroundColor: '#1e1e1e',
-        color: '#d4d4d4',
-        fontFamily: '"Inter", -apple-system, sans-serif',
-        overflow: 'hidden',
-    },
-    navbar: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 1rem',
-        height: '48px',
-        backgroundColor: '#252526',
-        borderBottom: '1px solid #3c3c3c',
-        flexShrink: 0,
-        gap: '1rem',
-    },
-    backButton: {
-        padding: '6px 14px',
-        borderRadius: '6px',
-        border: '1px solid #3c3c3c',
-        backgroundColor: 'transparent',
-        color: '#9cdcfe',
-        cursor: 'pointer',
-        fontSize: '13px',
-        fontFamily: 'inherit',
-    },
-    roomInfo: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontSize: '14px',
-    },
-    roomIcon: { fontSize: '18px', color: '#569cd6' },
-    roomLabel: { color: '#858585', fontWeight: 500 },
-    roomId: {
-        backgroundColor: '#2d2d2d',
-        border: '1px solid #3c3c3c',
-        borderRadius: '4px',
-        padding: '2px 8px',
-        fontSize: '12px',
-        color: '#9cdcfe',
-        letterSpacing: '0.5px',
-    },
-    navActions: { display: 'flex', alignItems: 'center', gap: '12px' },
-    shareButton: {
-        padding: '5px 12px',
-        borderRadius: '6px',
-        border: '1px solid #3c3c3c',
-        backgroundColor: '#3c3c3c',
-        color: '#e1e4e8',
-        cursor: 'pointer',
-        fontSize: '12px',
-        fontFamily: 'inherit',
-    },
-    statusOnline: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#4ec994', fontWeight: 500 },
-    statusOffline: { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#858585', fontWeight: 500 },
-    statusDot: { width: '7px', height: '7px', borderRadius: '50%', backgroundColor: 'currentColor', display: 'inline-block' },
-    ideContainer: { display: 'flex', flex: 1, overflow: 'hidden' },
-    mainArea: { flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' },
-    toolbar: {
-        height: '35px',
-        backgroundColor: '#1e1e1e',
-        borderBottom: '1px solid #3c3c3c',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '0 12px',
-        flexShrink: 0,
-    },
-    currentPath: { fontSize: '12px', color: '#858585', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' },
-    runButton: {
-        padding: '4px 14px',
-        borderRadius: '4px',
-        border: 'none',
-        backgroundColor: '#4ec9b0',
-        color: '#1e1e1e',
-        fontSize: '11px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        flexShrink: 0,
-    },
-    editorWrapper: { flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' },
-    noFile: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '12px',
-        color: '#555',
-        fontSize: '14px',
-    },
-    noFileIcon: { fontSize: '48px', color: '#2a2a2e' },
-
-    // Access control dialogs
-    loadingPage: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: '100vh',
-        backgroundColor: '#1e1e1e',
-        color: '#d4d4d4',
-    },
-    loadingBox: {
-        padding: '2rem',
-        fontSize: '16px',
-        color: '#858585',
-    },
-    errorBox: {
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '1rem',
-        padding: '2rem 3rem',
-        backgroundColor: '#252526',
-        borderRadius: '8px',
-        border: '1px solid #3c3c3c',
-    },
-    buttonRow: {
-        display: 'flex',
-        gap: '1rem',
-        marginTop: '1rem',
-    },
-    primaryBtn: {
-        padding: '10px 24px',
-        borderRadius: '6px',
-        border: 'none',
-        backgroundColor: '#4ec9b0',
-        color: '#1e1e1e',
-        fontSize: '14px',
-        fontWeight: '600',
-        cursor: 'pointer',
-        ':disabled': { opacity: 0.6, cursor: 'not-allowed' },
-    },
-    secondaryBtn: {
-        padding: '10px 24px',
-        borderRadius: '6px',
-        border: '1px solid #3c3c3c',
-        backgroundColor: 'transparent',
-        color: '#9cdcfe',
-        fontSize: '14px',
-        cursor: 'pointer',
-    },
 };
 
 export default Room;

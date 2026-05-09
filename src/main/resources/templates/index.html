@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home — CodeOrbit</title>
+    <meta name="description" content="CodeOrbit is a real-time collaborative browser IDE. Write, share, and run multi-language code with your team.">
+
+    <!-- Vite CSS Assets -->
+    <link rel="stylesheet" th:href="@{/dist/assets/styles.css}">
+    <link rel="stylesheet" th:href="@{/dist/assets/main.css}">
+
+    <!-- React Bundle (Vite) -->
+    <script type="module" th:src="@{/dist/assets/main.js}" defer></script>
+</head>
+<body class="bg-[#0D0D11] text-gray-100 antialiased font-sans min-h-screen overflow-x-hidden" style="margin:0;padding:0;">
+    <!-- React LandingPage mounts here (has its own header/footer) -->
+    <div id="landing-react-root" class="w-full h-full"></div>
+</body>
+</html>
