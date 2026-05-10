@@ -157,7 +157,7 @@
 }
 
 /* --- Hero --- */
-.hero-section {
+/* .hero-section {
   min-height: 100vh;
   display: flex; align-items: center;
   padding: 0 2rem;
@@ -166,6 +166,20 @@
   max-width: 680px;
   padding: 6rem 0 4rem;
   z-index: 2;
+} */
+
+.hero-section.landing-section {
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  padding: 0 6rem;
+}
+.hero-content {
+  max-width: 680px;
+  padding: 6rem 0 4rem;
+  z-index: 2;
+  text-align: left;
+  margin-left: 100px;
 }
 .hero-badge {
   display: inline-flex; align-items: center; gap: 0.5rem;
@@ -328,14 +342,14 @@
   width: 100%;
 }
 .arch-diagram {
-  background: var(--bg-card);
+  background: rgba(12, 16, 30, 0.92);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 2.5rem;
-  backdrop-filter: blur(8px);
+  padding: 2rem;
+  backdrop-filter: blur(12px);
   font-family: var(--font-mono);
-  font-size: 0.85rem;
-  line-height: 1.8;
+  font-size: 0.78rem;
+  line-height: 1.65;
   color: var(--text-muted);
   overflow-x: auto;
   white-space: pre;
@@ -456,6 +470,6 @@
   .features-grid { grid-template-columns: 1fr; }
   .tech-grid { grid-template-columns: repeat(3, 1fr); }
   .cta-card { padding: 3rem 1.5rem; }
-  .arch-diagram { font-size: 0.7rem; padding: 1.5rem; }
+  .arch-diagram { font-size: 0.65rem; padding: 1rem; }
   .landing-footer { flex-direction: column; text-align: center; }
 }

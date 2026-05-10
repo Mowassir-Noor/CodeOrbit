@@ -23,21 +23,33 @@ function ArchitectureSection() {
         <p className="section-tag">Architecture</p>
         <h2 className="section-title">How It Works</h2>
         <p className="section-desc">
-          A modern, event-driven architecture connecting browser-based editors 
-          with real-time collaboration infrastructure.
+          Event-driven architecture powered by Yjs CRDT for conflict-free 
+          real-time collaborative editing, STOMP messaging, and in-browser code execution.
         </p>
       </div>
       <div className="arch-container reveal">
         <div className="arch-diagram">
-{`  Browser (`}<span className="highlight">React IDE</span>{`)
-    │
-    ├── `}<span className="highlight2">WebContainer API</span>{` ──► in-browser Node.js runtime
-    │
-    ├── `}<span className="highlight">HTTP + JWT</span>{` ────────► Spring Boot REST API ──► PostgreSQL
-    │
-    └── `}<span className="highlight2">STOMP/SockJS</span>{` ──────► Spring WebSocket Broker
-                              ├── /topic/code/{roomId}  (editor sync)
-                              └── /topic/fs/{roomId}    (filesystem events)`}
+{`Browser (`}<span className="highlight">React + Monaco + Yjs</span>{`)
+│
+├─ `}<span className="highlight2">WebContainer API</span>{` ──► in-browser Node.js runtime
+│
+├─ `}<span className="highlight">HTTP + JWT</span>{` ───────► Spring Boot REST API
+│                                    │
+│                                    ▼
+│                             ┌──────────┐
+│                             │PostgreSQL│
+│                             │yjs_state │
+│                             │  BYTEA   │
+│                             └──────────┘
+│
+└─ `}<span className="highlight2">STOMP / SockJS</span>{` ───► Spring WebSocket Broker
+                         ├── /topic/code/{roomId}
+                         │   yjs-update   (incremental)
+                         │   yjs-request  (state sync)
+                         │   yjs-offer    (peer response)
+                         │   yjs-full     (DB snapshot)
+                         └── /topic/fs/{roomId}
+                             (file events)`}
         </div>
         <div className="arch-badges">
           <span className="arch-badge">
@@ -58,7 +70,7 @@ function ArchitectureSection() {
           </span>
           <span className="arch-badge">
             <span className="badge-dot" style={{ background: '#ef4444' }} />
-            STOMP Protocol
+            Yjs CRDT
           </span>
         </div>
       </div>

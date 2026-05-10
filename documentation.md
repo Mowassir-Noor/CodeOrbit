@@ -108,6 +108,9 @@ dto/
   ├── LoginRequest.java
   └── RegisterRequest.java
 
+exception/
+  └── GlobalExceptionHandler.java   # @RestControllerAdvice for structured error responses
+
 entity/
   ├── User.java                       # User profile, credentials, and BLOB image
   ├── Room.java                       # Room metadata (UUID id)
@@ -119,7 +122,7 @@ enums/
   └── FileType.java                   # FILE | DIRECTORY
 
 model/
-  ├── CodeMessage.java                # roomId + filePath + clientId + type + content/changes/yjsState
+  ├── CodeMessage.java                # roomId + filePath + clientId + type + content/changes/update/yjsState
   └── FileSystemEvent.java            # Typed FS event (8 event types)
 
 repository/
@@ -390,6 +393,7 @@ CREATE TABLE project_files (
   parent_id    BIGINT    REFERENCES project_files(id),
   file_type    VARCHAR   NOT NULL DEFAULT 'FILE',
   content      TEXT,
+  yjs_state    BYTEA,                    -- Yjs CRDT encoded state snapshot
   last_updated TIMESTAMP,
   UNIQUE (room_id, file_path)
 );
@@ -567,7 +571,9 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 - **Yjs doc cache** (`Map<filePath, Y.Doc>`) — one CRDT document per file, survives tab switches
 - **New client convergence**: loads `yjsState` from DB → `Y.applyUpdate()` → requests fresh state from peers
 - **Echo prevention** via `clientId` filtering on all incoming messages
-- **Periodic auto-save**: 5s `yjs-full` snapshots to DB (stored as `yjsState` BLOB)
+- **STOMP connect race condition fix**: files opened before WebSocket connects get their `StompYjsProvider` created lazily in `onConnect`
+- **Duplicate provider guard**: revisiting a file reuses the existing provider instead of creating a second one
+- **Periodic auto-save**: 5s `yjs-full` snapshots to DB (stored as `yjsState` BYTEA)
 - **Optimized Monaco options**: `minimap: false`, `overviewRulerLanes: 0`, `occurrencesHighlight: 'off'`, `selectionHighlight: false`, `codeLens: false`, `cursorSmoothCaretAnimation: 'on'`
 - `useImperativeHandle` exposes `getValue()`, `getModel()`, `forceSave()`
 - **Simultaneous typing fully supported** — Yjs automatically merges concurrent edits without conflicts
@@ -661,6 +667,7 @@ npm run build
 |---|---|
 | **Conflict Resolution** | **Yjs CRDT** — automatic convergence for simultaneous edits. No Last-Writer-Wins. All concurrent changes merge correctly. |
 | **Container Ephemerality** | `npm install` results in terminal are not persisted to PostgreSQL. |
+| **Column Type Fix** | `yjsState` column must be `BYTEA` (not `OID`). Remove `@Lob` from `byte[]` in Hibernate 6 + PostgreSQL. |
 | **Binary Files** | Text-based source files only. |
 | **COOP/COEP Headers** | Required for WebContainers terminal; may conflict with some browser extensions. |
 | **Backend Execution** | Requires Python, Node.js, GCC, G++, Rust, Go, and Java installed on server. Use the provided Dockerfile for a fully-equipped production image. |
