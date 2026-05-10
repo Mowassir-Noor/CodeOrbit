@@ -121,4 +121,20 @@ public class ProjectFileController {
         projectFileService.deleteFile(roomId, filePath);
         return ResponseEntity.ok().build();
     }
+
+    /** Load Yjs CRDT state snapshot for collaborative editing convergence */
+    @GetMapping("/{roomId}/yjs")
+    public ResponseEntity<String> getYjsState(
+            @PathVariable String roomId,
+            @RequestParam String filePath,
+            @AuthenticationPrincipal UserDetails userDetails) {
+        Long userId = getCurrentUserId(userDetails);
+        roomService.getRoomById(roomId, userId);
+        byte[] state = projectFileService.getYjsState(roomId, filePath);
+        if (state == null) {
+            return ResponseEntity.ok("");
+        }
+        // Base64-encode binary Yjs state for JSON transport
+        return ResponseEntity.ok(java.util.Base64.getEncoder().encodeToString(state));
+    }
 }

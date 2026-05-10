@@ -44,6 +44,11 @@ public class ProjectFile {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    /** Yjs CRDT encoded state snapshot for collaborative editing convergence */
+    @Column(columnDefinition = "BYTEA")
+    @Lob
+    private byte[] yjsState;
+
     private LocalDateTime lastUpdated;
 
     @PrePersist

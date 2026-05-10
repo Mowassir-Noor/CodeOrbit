@@ -44,18 +44,33 @@ public class CodeController {
         // Verify room membership
         roomService.getRoomById(message.getRoomId(), user.getId());
 
-        // Persist only on explicit full-sync (e.g., tab switch, manual save, run).
-        // Delta messages are real-time sync only — DB persistence is deferred to
-        // reduce write load and avoid race conditions during rapid typing.
-        if ("full".equals(message.getType())
+        String type = message.getType();
+
+        // Persist plain-text content on legacy full-sync (backward compat)
+        if ("full".equals(type)
                 && message.getFilePath() != null
                 && !message.getFilePath().isEmpty()
                 && message.getContent() != null) {
             projectFileService.saveFile(message.getRoomId(), message.getFilePath(), message.getContent());
         }
 
+        // Persist Yjs CRDT state snapshot for collaborative convergence
+        if ("yjs-full".equals(type)
+                && message.getFilePath() != null
+                && !message.getFilePath().isEmpty()
+                && message.getYjsState() != null
+                && !message.getYjsState().isEmpty()) {
+            try {
+                byte[] state = java.util.Base64.getDecoder().decode(message.getYjsState());
+                projectFileService.saveYjsState(message.getRoomId(), message.getFilePath(), state);
+            } catch (IllegalArgumentException e) {
+                // Invalid base64 — ignore persistence but still broadcast
+            }
+        }
+
         // Broadcast to all clients including sender.
         // The sender filters its own messages via clientId to avoid echo loops.
+        // Yjs messages (yjs-update, yjs-request, yjs-offer) are relayed verbatim.
         messagingTemplate.convertAndSend("/topic/code/" + message.getRoomId(), message);
     }
 }

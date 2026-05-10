@@ -9,13 +9,14 @@ import java.util.List;
 /**
  * WebSocket message for real-time code collaboration.
  *
- * Supports two sync modes:
- * - type="full": carries the entire file content (backward compat / initial
- * load)
- * - type="delta": carries incremental Monaco change operations
- * (high-performance)
- *
- * The delta format is forward-compatible with future Yjs/CRDT integration.
+ * Sync modes:
+ * - type="full": entire file content (backward compat / DB persistence)
+ * - type="delta": incremental Monaco change operations (legacy, being phased
+ * out)
+ * - type="yjs-update": Yjs incremental update (primary real-time sync)
+ * - type="yjs-request": request full Yjs state from peers
+ * - type="yjs-offer": respond with full Yjs state (base64 in yjsState)
+ * - type="yjs-full": periodic full Yjs state snapshot for DB persistence
  */
 @Data
 @NoArgsConstructor
@@ -27,6 +28,7 @@ public class CodeMessage {
     private String type; // "full" or "delta"
     private String content; // used when type="full"
     private List<ContentChange> changes; // used when type="delta"
+    private String yjsState; // base64-encoded Yjs document state (used when type="yjs-full" or "yjs-offer")
 
     /**
      * Mirrors Monaco's IModelContentChange structure for incremental sync.

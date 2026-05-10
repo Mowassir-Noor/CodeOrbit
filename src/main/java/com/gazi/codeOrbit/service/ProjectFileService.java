@@ -53,6 +53,21 @@ public class ProjectFileService {
         repo.save(file);
     }
 
+    @Transactional
+    public void saveYjsState(String roomId, String filePath, byte[] yjsState) {
+        ProjectFile file = repo.findByRoomIdAndFilePath(roomId, filePath)
+                .orElseThrow(() -> new IllegalArgumentException("File not found: " + filePath));
+        file.setYjsState(yjsState);
+        repo.save(file);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] getYjsState(String roomId, String filePath) {
+        return repo.findByRoomIdAndFilePath(roomId, filePath)
+                .map(ProjectFile::getYjsState)
+                .orElse(null);
+    }
+
     // ─── Create (file or folder) ───────────────────────────────────────────────
 
     @Transactional

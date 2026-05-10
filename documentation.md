@@ -39,7 +39,7 @@ Browser (Spring Boot Thymeleaf Shell + React Fragments)
 **Workflow:**
 - **Hybrid Rendering**: Thymeleaf manages the global application shell and navigation layout, while React is dynamically mounted inside specific pages (Dashboard, Room) for high interactivity.
 - **Persistence**: Files and folders are stored in PostgreSQL as a parent-child adjacency list.
-- **Editor Sync**: Incremental delta changes broadcast via `/topic/code/{roomId}` with `clientId`-filtered echo prevention. Only changed ranges are transmitted (not full file content), and DB persistence is deferred to a 3s periodic full-sync to avoid write load during rapid typing.
+- **Editor Sync**: Yjs CRDT over STOMP WebSocket. Each file has a `Y.Doc` that converges across all clients automatically. Incremental `Yjs` updates are broadcast via `/topic/code/{roomId}`. DB persistence stores both plain text (`content`) and CRDT state (`yjsState`) for new client convergence. Simultaneous typing is fully supported with automatic conflict resolution.
 - **FS Sync**: Create/rename/move/delete operations broadcast typed `FileSystemEvent` payloads via `/topic/fs/{roomId}`.
 - **Execution**: Code runs via backend execution service (Docker-style sandbox) supporting Python, JavaScript, TypeScript, C, C++, Rust, Go, and Java. Output streams directly to xterm.js terminal.
 
@@ -69,6 +69,7 @@ Browser (Spring Boot Thymeleaf Shell + React Fragments)
 | Interactivity | Alpine.js (for simple shell interactions) |
 | Animations | GSAP (GreenSock Animation Platform) |
 | Editor | Monaco Editor (`@monaco-editor/react`) with `editor.setModel()` model cache |
+| Collaboration | Yjs CRDT + `y-monaco` binding |
 | Icons | Inline SVG (cross-browser, no emoji fonts) |
 | Execution | WebContainer API (StackBlitz) |
 | Terminal | xterm.js + FitAddon |
@@ -111,14 +112,14 @@ entity/
   ├── User.java                       # User profile, credentials, and BLOB image
   ├── Room.java                       # Room metadata (UUID id)
   ├── RoomMember.java                 # Room membership (user-room many-to-many)
-  └── ProjectFile.java                # Hierarchical node (file or folder)
+  └── ProjectFile.java                # Hierarchical node (file or folder) + yjsState BLOB
 
 enums/
   ├── AuthProvider.java               # LOCAL | GOOGLE | GITHUB (GOOGLE active for OAuth2)
   └── FileType.java                   # FILE | DIRECTORY
 
 model/
-  ├── CodeMessage.java                # roomId + filePath + clientId + type ("full"/"delta") + changes[]
+  ├── CodeMessage.java                # roomId + filePath + clientId + type + content/changes/yjsState
   └── FileSystemEvent.java            # Typed FS event (8 event types)
 
 repository/
@@ -154,7 +155,7 @@ resources/
 ```
 components/
   ├── ContextMenu.jsx     # Position-aware right-click menu
-  ├── Editor.jsx          # Collaborative Monaco Editor (STOMP)
+  ├── Editor.jsx          # Yjs CRDT collaborative Monaco Editor
   ├── FileTree.jsx        # VS Code-style recursive tree explorer
   ├── TabBar.jsx          # Closable editor tabs with dirty state
   ├── TerminalPanel.jsx   # WebContainer shell + xterm.js
@@ -184,6 +185,9 @@ landing/
 
 services/
   └── api.js              # Axios client with JWT interceptor + all FS endpoints
+
+yjs/
+  └── StompProvider.js    # Custom Yjs provider bridging CRDT over STOMP WebSocket
 ```
 
 ---
@@ -211,18 +215,36 @@ JWT is sent in the STOMP `CONNECT` frame headers via `WebSocketAuthInterceptor`.
 
 ## Real-Time Collaboration
 
-### Editor Sync — `/topic/code/{roomId}`
-- **Publish (Delta)**: `POST /app/code.send` with `{ roomId, filePath, clientId, type: "delta", changes: [{range, text}] }`
-  - Only changed ranges are sent (not full content)
-  - Accumulated changes are flushed every **500ms**
-  - The `clientId` field prevents the sender from reapplying its own broadcast
-- **Publish (Full)**: `POST /app/code.send` with `{ roomId, filePath, clientId, type: "full", content }`
-  - Used for initial load, tab switch, and periodic auto-save (every **3s**)
-  - This is the only type that triggers a DB `saveFile()` write
-- **Receive (Delta)**: Remote clients apply via `editor.executeEdits('remote', ops)` — true incremental, no full reparse
-- **Receive (Full)**: Applied via `model.pushEditOperations(...)` preserving cursor, undo history
-- **Echo Prevention**: Messages with `clientId === localClientId` are silently ignored
-- **Model Cache**: One Monaco `ITextModel` per file path is stored in a `Map`; switching tabs uses `editor.setModel()` instead of recreating models
+### Editor Sync — `/topic/code/{roomId}` (Yjs CRDT)
+
+CodeOrbit uses **Yjs CRDT** (Conflict-free Replicated Data Type) for true simultaneous collaborative editing. This means multiple users can type in the same file at the same time, and all changes converge automatically without conflicts.
+
+**Architecture:**
+- Each file has one `Y.Doc` per client (cached in `ydocCacheRef`)
+- `MonacoBinding` (from `y-monaco`) syncs `Y.Text` ↔ Monaco `ITextModel` automatically
+- `StompYjsProvider` bridges Yjs updates over STOMP WebSocket
+
+**Message Types:**
+
+| Type | Direction | Description |
+|---|---|---|
+| `yjs-update` | Outgoing / Incoming | Incremental CRDT update (`update` field: base64-encoded `Uint8Array`). Broadcast on every local Yjs document change. |
+| `yjs-request` | Outgoing | New client requests full state from peers. Sent once on file open. |
+| `yjs-offer` | Outgoing / Incoming | Peer responds with full `encodeStateAsUpdate(doc)` (`yjsState` field: base64). Only peers active >2s respond. |
+| `yjs-full` | Outgoing | Periodic full state snapshot (every **5s**). Persisted to DB as `yjsState` BLOB. |
+| `full` | Outgoing | Legacy plain-text sync. Still used for backward-compat DB persistence. |
+| `delta` | — | Legacy Monaco incremental sync (ignored by Yjs clients). |
+
+**New Client Convergence:**
+1. Load `yjsState` from DB via `GET /api/files/{roomId}/yjs`
+2. If available: `Y.applyUpdate(doc, decodedState)` — instant convergence to canonical state
+3. If not available: fall back to plain-text `content` → insert into `Y.Text`
+4. Create `MonacoBinding` + `StompYjsProvider`
+5. Send `yjs-request` to catch any edits made since last DB snapshot
+
+**Echo Prevention:** `clientId` filtering — messages with `clientId === localClientId` are silently ignored.
+
+**Model Cache:** One Monaco `ITextModel` + one `Y.Doc` per file path. Switching tabs uses `editor.setModel()` without recreation.
 
 ### Filesystem Events — `/topic/fs/{roomId}`
 All filesystem mutations (create, rename, move, delete) broadcast a `FileSystemEvent` to every room member. The `useFileSystem` hook subscribes and applies each event optimistically to the local node list.
@@ -245,6 +267,7 @@ CodeOrbit implements a full **VS Code–style filesystem** with:
 | `parent_id` | BIGINT | FK to parent folder (null = root) |
 | `file_type` | ENUM | `FILE` \| `DIRECTORY` |
 | `content` | TEXT | File content (null for directories) |
+| `yjs_state` | BYTEA | Yjs CRDT encoded state snapshot for convergence |
 | `last_updated` | TIMESTAMP | Auto-updated |
 
 **Indexes**: `idx_pf_room`, `idx_pf_parent`, `idx_pf_path`
@@ -428,6 +451,7 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 | PATCH  | `/api/files/nodes/{id}/move` | `MoveRequest` | Move node to new parent |
 | DELETE | `/api/files/nodes/{id}` | — | Delete node (recursive if folder) |
 | DELETE | `/api/files/{roomId}?filePath=` | — | Legacy: delete file by path |
+| GET | `/api/files/{roomId}/yjs` | `?filePath=` | Load base64-encoded Yjs CRDT state snapshot |
 
 ### Code Execution
 | Method | Path | Body | Description |
@@ -463,8 +487,25 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 ## WebSocket Event Reference
 
 ### Editor Channel — `/topic/code/{roomId}`
+
+**Yjs CRDT Messages:**
 ```json
-{ "roomId": "...", "filePath": "src/index.js", "content": "..." }
+// Incremental update
+{ "roomId": "...", "filePath": "src/index.js", "clientId": "...", "type": "yjs-update", "update": "base64..." }
+
+// Request full state
+{ "roomId": "...", "filePath": "src/index.js", "clientId": "...", "type": "yjs-request" }
+
+// Offer full state
+{ "roomId": "...", "filePath": "src/index.js", "clientId": "...", "type": "yjs-offer", "yjsState": "base64..." }
+
+// Periodic full snapshot (persisted to DB)
+{ "roomId": "...", "filePath": "src/index.js", "clientId": "...", "type": "yjs-full", "yjsState": "base64..." }
+```
+
+**Legacy Messages (backward compat):**
+```json
+{ "roomId": "...", "filePath": "src/index.js", "clientId": "...", "type": "full", "content": "..." }
 ```
 
 ### Filesystem Channel — `/topic/fs/{roomId}`
@@ -517,16 +558,26 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 - Dismisses on outside click or `Escape`
 - Position-clamped to viewport bounds
 
-### `Editor.jsx` (High-Performance Collaborative)
+### `Editor.jsx` (Yjs CRDT Collaborative)
 - **Wrapped with `React.memo`** — zero re-renders during typing; all mutable state lives in `useRef`
-- **Incremental delta sync** via `editor.onDidChangeModelContent` → STOMP `changes[]` (not full content)
-- **Model cache** (`Map<filePath, ITextModel>`) — models are reused on tab switches via `editor.setModel()`
-- **View state cache** (`Map<filePath, IEditorViewState>`) — scroll position and cursor restored on tab switch
-- **Echo prevention** via `clientId` comparison on incoming messages
-- **Outgoing debounce**: 500ms for delta, 3s periodic auto-save for full sync
+- **Yjs CRDT** (`Y.Doc` per file) with `y-monaco` `MonacoBinding` for automatic two-way sync
+- **Custom `StompYjsProvider`** bridges Yjs updates over STOMP WebSocket with base64 encoding
+- **Model cache** (`Map<filePath, ITextModel>`) — models reused on tab switches via `editor.setModel()`
+- **View state cache** (`Map<filePath, IEditorViewState>`) — scroll and cursor restored on tab switch
+- **Yjs doc cache** (`Map<filePath, Y.Doc>`) — one CRDT document per file, survives tab switches
+- **New client convergence**: loads `yjsState` from DB → `Y.applyUpdate()` → requests fresh state from peers
+- **Echo prevention** via `clientId` filtering on all incoming messages
+- **Periodic auto-save**: 5s `yjs-full` snapshots to DB (stored as `yjsState` BLOB)
 - **Optimized Monaco options**: `minimap: false`, `overviewRulerLanes: 0`, `occurrencesHighlight: 'off'`, `selectionHighlight: false`, `codeLens: false`, `cursorSmoothCaretAnimation: 'on'`
 - `useImperativeHandle` exposes `getValue()`, `getModel()`, `forceSave()`
-- Forward-compatible with future Yjs/CRDT integration (same `changes` payload shape)
+- **Simultaneous typing fully supported** — Yjs automatically merges concurrent edits without conflicts
+
+### `StompProvider.js` (Yjs Provider)
+- Bridges Yjs `Doc` updates over STOMP pub/sub
+- `toBase64` / `fromBase64` helpers for `Uint8Array` ↔ JSON transport
+- **State request protocol**: new clients send `yjs-request`, established peers (>2s) respond with `yjs-offer`
+- **Broadcast methods**: `broadcastUpdate()` for incremental, `broadcastFullState()` for snapshots
+- **Message routing**: `onRemoteMessage()` handles `yjs-update`, `yjs-request`, `yjs-offer`, `yjs-full`
 
 ### `TerminalPanel.jsx`
 - WebContainer boot (singleton across tab) for interactive shell
@@ -608,13 +659,13 @@ npm run build
 
 | Constraint | Detail |
 |---|---|
-| **Conflict Resolution** | Last-Writer-Wins for editor content. Incremental delta sync reduces collision surface vs full-content sync. Future Yjs/CRDT integration is architecturally prepared. |
+| **Conflict Resolution** | **Yjs CRDT** — automatic convergence for simultaneous edits. No Last-Writer-Wins. All concurrent changes merge correctly. |
 | **Container Ephemerality** | `npm install` results in terminal are not persisted to PostgreSQL. |
 | **Binary Files** | Text-based source files only. |
 | **COOP/COEP Headers** | Required for WebContainers terminal; may conflict with some browser extensions. |
 | **Backend Execution** | Requires Python, Node.js, GCC, G++, Rust, Go, and Java installed on server. Use the provided Dockerfile for a fully-equipped production image. |
 | **Rename Race Condition** | Concurrent renames of the same folder by two users resolve to last write. |
-| **Cursor Awareness** | Multi-cursor presence (ghost cursors) not yet implemented. Client echo filtering prevents cursor jumps from self-broadcasts. |
+| **Cursor Awareness** | Multi-cursor presence (ghost cursors) not yet implemented. Yjs handles text convergence; cursors are local-only. |
 
 ---
 

@@ -57,6 +57,9 @@ export const projectFileService = {
 
     getSupportedLanguages: () =>
         api.get('/api/execute/languages'),
+
+    getYjsState: (roomId, filePath) =>
+        api.get(`/api/files/${roomId}/yjs?filePath=${encodeURIComponent(filePath)}`),
 };
 
 export default api;
