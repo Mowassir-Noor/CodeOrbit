@@ -1,6 +1,6 @@
 {
-  "_howler-j6EFlT-7.js": {
-    "file": "assets/howler-j6EFlT-7.js",
+  "_howler-B-MFTofx.js": {
+    "file": "assets/howler-B-MFTofx.js",
     "name": "howler",
     "isDynamicEntry": true,
     "imports": [
@@ -8,7 +8,7 @@
     ]
   },
   "node_modules/@splinetool/react-spline/dist/react-spline.js": {
-    "file": "assets/react-spline-BFOO33i9.js",
+    "file": "assets/react-spline-Dijzr8ki.js",
     "name": "react-spline",
     "src": "node_modules/@splinetool/react-spline/dist/react-spline.js",
     "isDynamicEntry": true,
@@ -20,14 +20,14 @@
       "node_modules/@splinetool/runtime/build/physics.js",
       "node_modules/@splinetool/runtime/build/process.js",
       "node_modules/@splinetool/runtime/build/boolean.js",
-      "_howler-j6EFlT-7.js",
+      "_howler-B-MFTofx.js",
       "node_modules/@splinetool/runtime/build/opentype.js",
       "node_modules/@splinetool/runtime/build/ui.js",
       "node_modules/@splinetool/runtime/build/gaussian-splat-compression.js"
     ]
   },
   "node_modules/@splinetool/runtime/build/boolean.js": {
-    "file": "assets/boolean-M1LVEoHW.js",
+    "file": "assets/boolean-G1Loi9pj.js",
     "name": "boolean",
     "src": "node_modules/@splinetool/runtime/build/boolean.js",
     "isDynamicEntry": true
@@ -39,7 +39,7 @@
     "isDynamicEntry": true
   },
   "node_modules/@splinetool/runtime/build/navmesh.js": {
-    "file": "assets/navmesh-D19wqnly.js",
+    "file": "assets/navmesh-CdBwcziK.js",
     "name": "navmesh",
     "src": "node_modules/@splinetool/runtime/build/navmesh.js",
     "isDynamicEntry": true
@@ -57,7 +57,7 @@
     "isDynamicEntry": true
   },
   "node_modules/@splinetool/runtime/build/process.js": {
-    "file": "assets/process-CUFQKizh.js",
+    "file": "assets/process-Cm5IB_MR.js",
     "name": "process",
     "src": "node_modules/@splinetool/runtime/build/process.js",
     "isDynamicEntry": true

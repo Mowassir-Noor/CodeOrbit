@@ -20,7 +20,7 @@ function _mergeNamespaces(n, m) {
 }
 var howler$2 = {};
 /*! howler.js v2.2.3 | (c) 2013-2020, James Simpson of GoldFire Studios | MIT License | howlerjs.com */
-(function(exports$1) {
+(function(exports) {
   !function() {
     var e = function() {
       this.init();
@@ -561,7 +561,7 @@ var howler$2 = {};
         n.usingWebAudio && (n.masterGain = void 0 === n.ctx.createGain ? n.ctx.createGainNode() : n.ctx.createGain(), n.masterGain.gain.setValueAtTime(n._muted ? 0 : n._volume, n.ctx.currentTime), n.masterGain.connect(n.ctx.destination)), n._setup();
       }
     };
-    exports$1.Howler = n, exports$1.Howl = o, "undefined" != typeof window ? (window.HowlerGlobal = e, window.Howler = n, window.Howl = o, window.Sound = t) : "undefined" != typeof window && (window.HowlerGlobal = e, window.Howler = n, window.Howl = o, window.Sound = t);
+    exports.Howler = n, exports.Howl = o, "undefined" != typeof window ? (window.HowlerGlobal = e, window.Howler = n, window.Howl = o, window.Sound = t) : "undefined" != typeof window && (window.HowlerGlobal = e, window.Howler = n, window.Howl = o, window.Sound = t);
   }();
 })(howler$2);
 const howler = /* @__PURE__ */ getDefaultExportFromCjs(howler$2);

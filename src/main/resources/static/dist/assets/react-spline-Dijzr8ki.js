@@ -1,4 +1,4 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/howler-j6EFlT-7.js","assets/main.js","assets/main.css"])))=>i.map(i=>d[i]);
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/howler-B-MFTofx.js","assets/main.js","assets/main.css"])))=>i.map(i=>d[i]);
 import { _ as __vitePreload, g as getDefaultExportFromCjs, r as reactExports, j as jsxRuntimeExports } from "./main.js";
 var sU = Object.create;
 var hy = Object.defineProperty;
@@ -15132,7 +15132,7 @@ var r0;
 function _D(n) {
   if (r0) return r0;
   async function t() {
-    let r = n ?? "https://unpkg.com/@splinetool/navmesh-wasm@1.12.92/build", s = __vitePreload(() => import("./navmesh-D19wqnly.js"), true ? [] : void 0), [o10, a] = await Promise.all([s, fetch(`${r}/navmesh.wasm`).then((u) => u.arrayBuffer())]), l = o10.default, c = await l({ wasmBinary: a });
+    let r = n ?? "https://unpkg.com/@splinetool/navmesh-wasm@1.12.92/build", s = __vitePreload(() => import("./navmesh-CdBwcziK.js"), true ? [] : void 0), [o10, a] = await Promise.all([s, fetch(`${r}/navmesh.wasm`).then((u) => u.arrayBuffer())]), l = o10.default, c = await l({ wasmBinary: a });
     CD(c);
   }
   return r0 = t(), r0;
@@ -24932,7 +24932,7 @@ function R3(n) {
   if (D3) return;
   if (Lx) return Lx;
   async function t() {
-    let r = n ?? "https://unpkg.com/@splinetool/modelling-wasm@1.12.92/build", s = __vitePreload(() => import("./process-CUFQKizh.js"), true ? [] : void 0), [o10, a] = await Promise.all([s, fetch(`${r}/process.wasm`).then((u) => u.arrayBuffer())]), l = o10.default, c = await l({ wasmBinary: a });
+    let r = n ?? "https://unpkg.com/@splinetool/modelling-wasm@1.12.92/build", s = __vitePreload(() => import("./process-Cm5IB_MR.js"), true ? [] : void 0), [o10, a] = await Promise.all([s, fetch(`${r}/process.wasm`).then((u) => u.arrayBuffer())]), l = o10.default, c = await l({ wasmBinary: a });
     O3(c), D3 = true;
   }
   return Lx = t(), Lx;
@@ -25189,7 +25189,7 @@ var Vx;
 function k3(n) {
   if (Vx) return Vx;
   async function t() {
-    let r = n ?? "https://unpkg.com/@splinetool/boolean-wasm@1.12.92/build", s = __vitePreload(() => import("./boolean-M1LVEoHW.js"), true ? [] : void 0), [o10, a] = await Promise.all([s, fetch(`${r}/boolean.wasm`).then((u) => u.arrayBuffer())]), l = o10.default, c = await l({ wasmBinary: a });
+    let r = n ?? "https://unpkg.com/@splinetool/boolean-wasm@1.12.92/build", s = __vitePreload(() => import("./boolean-G1Loi9pj.js"), true ? [] : void 0), [o10, a] = await Promise.all([s, fetch(`${r}/boolean.wasm`).then((u) => u.arrayBuffer())]), l = o10.default, c = await l({ wasmBinary: a });
     V3(c);
   }
   return Vx = t(), Vx;
@@ -30559,7 +30559,7 @@ function AL() {
   if (bL) return;
   if ($x) return $x;
   async function n() {
-    await __vitePreload(() => import("./howler-j6EFlT-7.js").then((n10) => n10.h), true ? __vite__mapDeps([0,1,2]) : void 0), SL(window !== void 0 ? window : window), bL = true;
+    await __vitePreload(() => import("./howler-B-MFTofx.js").then((n10) => n10.h), true ? __vite__mapDeps([0,1,2]) : void 0), SL(window !== void 0 ? window : window), bL = true;
   }
   return $x = n(), $x;
 }

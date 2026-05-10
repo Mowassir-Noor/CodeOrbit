@@ -69,7 +69,7 @@ Browser (Spring Boot Thymeleaf Shell + React Fragments)
 | Interactivity | Alpine.js (for simple shell interactions) |
 | Animations | GSAP (GreenSock Animation Platform) |
 | Editor | Monaco Editor (`@monaco-editor/react`) with `editor.setModel()` model cache |
-| Collaboration | Yjs CRDT + `y-monaco` binding |
+| Collaboration | Yjs CRDT + `y-monaco` binding + `y-protocols` (peer dep)
 | Icons | Inline SVG (cross-browser, no emoji fonts) |
 | Execution | WebContainer API (StackBlitz) |
 | Terminal | xterm.js + FitAddon |

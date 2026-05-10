@@ -361,8 +361,8 @@ var Module = function() {
     function createWasm() {
       var info = { "a": asmLibraryArg };
       function receiveInstance(instance, module) {
-        var exports$12 = instance.exports;
-        Module2["asm"] = exports$12;
+        var exports2 = instance.exports;
+        Module2["asm"] = exports2;
         wasmMemory = Module2["asm"]["m"];
         updateGlobalBufferAndViews(wasmMemory.buffer);
         wasmTable = Module2["asm"]["Jb"];
@@ -399,8 +399,8 @@ var Module = function() {
       }
       if (Module2["instantiateWasm"]) {
         try {
-          var exports$1 = Module2["instantiateWasm"](info, receiveInstance);
-          return exports$1;
+          var exports = Module2["instantiateWasm"](info, receiveInstance);
+          return exports;
         } catch (e) {
           err("Module.instantiateWasm callback failed with error: " + e);
           return false;
