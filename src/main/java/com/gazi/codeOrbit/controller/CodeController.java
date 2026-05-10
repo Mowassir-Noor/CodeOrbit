@@ -38,18 +38,24 @@ public class CodeController {
             throw new IllegalArgumentException("User not authenticated");
         }
 
-        // Get user and check room access
         User user = userRepository.findByUsername(principal.getName())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
-        // Check access - throws if not a member
+        // Verify room membership
         roomService.getRoomById(message.getRoomId(), user.getId());
 
-        // Persist the change
-        if (message.getFilePath() != null && !message.getFilePath().isEmpty()) {
+        // Persist only on explicit full-sync (e.g., tab switch, manual save, run).
+        // Delta messages are real-time sync only — DB persistence is deferred to
+        // reduce write load and avoid race conditions during rapid typing.
+        if ("full".equals(message.getType())
+                && message.getFilePath() != null
+                && !message.getFilePath().isEmpty()
+                && message.getContent() != null) {
             projectFileService.saveFile(message.getRoomId(), message.getFilePath(), message.getContent());
         }
 
+        // Broadcast to all clients including sender.
+        // The sender filters its own messages via clientId to avoid echo loops.
         messagingTemplate.convertAndSend("/topic/code/" + message.getRoomId(), message);
     }
 }

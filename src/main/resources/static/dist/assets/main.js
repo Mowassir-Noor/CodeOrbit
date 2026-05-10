@@ -11919,12 +11919,12 @@ if (window.crypto && window.crypto.getRandomValues) {
     return bytes;
   };
 }
-var crypto = browserCrypto;
+var crypto$1 = browserCrypto;
 var _randomStringChars = "abcdefghijklmnopqrstuvwxyz012345";
 var random$6 = {
   string: function(length) {
     var max = _randomStringChars.length;
-    var bytes = crypto.randomBytes(length);
+    var bytes = crypto$1.randomBytes(length);
     var ret = [];
     for (var i = 0; i < length; i++) {
       ret.push(_randomStringChars.substr(bytes[i] % max, 1));
@@ -16360,39 +16360,205 @@ var stomp_umdExports = stomp_umd.exports;
 const WS_URL$1 = `${window.location.protocol}//${window.location.host}/ws`;
 const TOPIC_PREFIX = "/topic/code/";
 const SEND_DEST = "/app/code.send";
-const DEBOUNCE_MS = 350;
-const Editor = React.forwardRef(({ roomId, filePath, onConnectionChange }, ref2) => {
+const OUTGOING_DEBOUNCE_MS = 500;
+const FULL_SYNC_INTERVAL_MS = 3e3;
+const STABLE_PATH = "codeorbit-editor";
+function generateClientId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+function getLanguageId(filePath) {
+  var _a;
+  if (!filePath) return "plaintext";
+  const ext = (_a = filePath.split(".").pop()) == null ? void 0 : _a.toLowerCase();
+  const map = {
+    js: "javascript",
+    jsx: "javascript",
+    ts: "typescript",
+    tsx: "typescript",
+    java: "java",
+    py: "python",
+    json: "json",
+    html: "html",
+    css: "css",
+    scss: "scss",
+    less: "less",
+    md: "markdown",
+    sh: "shell",
+    bash: "shell",
+    txt: "plaintext",
+    xml: "xml",
+    yml: "yaml",
+    yaml: "yaml",
+    dockerfile: "dockerfile",
+    rs: "rust",
+    go: "go",
+    rb: "ruby",
+    php: "php",
+    cs: "csharp",
+    cpp: "cpp",
+    c: "c",
+    h: "c",
+    vue: "vue",
+    svelte: "svelte",
+    sql: "sql",
+    graphql: "graphql"
+  };
+  return map[ext] || "plaintext";
+}
+const Editor = reactExports.memo(React.forwardRef(({ roomId, filePath, onConnectionChange, onDirtyChange }, ref2) => {
   const editorRef = reactExports.useRef(null);
   const monacoRef = reactExports.useRef(null);
+  const modelCacheRef = reactExports.useRef(/* @__PURE__ */ new Map());
+  const viewStateCacheRef = reactExports.useRef(/* @__PURE__ */ new Map());
   const stompRef = reactExports.useRef(null);
-  const isRemoteRef = reactExports.useRef(false);
-  const debounceTimer = reactExports.useRef(null);
+  const clientIdRef = reactExports.useRef(generateClientId());
+  const isApplyingRemoteRef = reactExports.useRef(false);
+  const outgoingQueueRef = reactExports.useRef([]);
+  const outgoingTimerRef = reactExports.useRef(null);
+  const fullSyncTimerRef = reactExports.useRef(null);
+  const filePathRef = reactExports.useRef(filePath);
   const subscriptionRef = reactExports.useRef(null);
-  React.useImperativeHandle(ref2, () => ({
+  const changeListenerRef = reactExports.useRef(null);
+  const didInitRef = reactExports.useRef(false);
+  reactExports.useEffect(() => {
+    filePathRef.current = filePath;
+  }, [filePath]);
+  reactExports.useImperativeHandle(ref2, () => ({
     getValue: () => {
       var _a;
       return ((_a = editorRef.current) == null ? void 0 : _a.getValue()) || "";
-    }
+    },
+    getModel: () => {
+      var _a;
+      return ((_a = editorRef.current) == null ? void 0 : _a.getModel()) || null;
+    },
+    forceSave: () => sendFullSync()
   }));
-  reactExports.useEffect(() => {
-    if (!roomId || !filePath) {
-      applyRemoteContent("");
-      return;
-    }
-    projectFileService.getFiles(roomId).then((res) => {
-      const files = res.data;
-      const file = files.find((f2) => f2.filePath === filePath);
-      const content = file && typeof file.content === "string" ? file.content : "";
-      if (editorRef.current) {
-        applyRemoteContent(content);
-      } else {
-        pendingContentRef.current = content;
-      }
-    }).catch((err) => {
-      console.error("[Editor] Failed to load initial file:", err);
+  const handleEditorDidMount = reactExports.useCallback((editor, monaco) => {
+    editorRef.current = editor;
+    monacoRef.current = monaco;
+    didInitRef.current = true;
+    changeListenerRef.current = editor.onDidChangeModelContent((event2) => {
+      if (isApplyingRemoteRef.current) return;
+      onDirtyChange == null ? void 0 : onDirtyChange(filePathRef.current, true);
+      queueOutgoingDelta(event2.changes);
     });
+  }, [onDirtyChange]);
+  const ensureModel = reactExports.useCallback((targetFilePath, initialContent = "") => {
+    const monaco = monacoRef.current;
+    if (!monaco) return null;
+    let model = modelCacheRef.current.get(targetFilePath);
+    if (model && !model.isDisposed()) {
+      return model;
+    }
+    const uri = monaco.Uri.parse(`file://${targetFilePath}`);
+    const language = getLanguageId(targetFilePath);
+    model = monaco.editor.createModel(initialContent, language, uri);
+    modelCacheRef.current.set(targetFilePath, model);
+    return model;
+  }, []);
+  const switchToFile = reactExports.useCallback((targetFilePath) => {
+    var _a, _b;
+    const editor = editorRef.current;
+    if (!editor || !targetFilePath) return;
+    const currentModel = editor.getModel();
+    const currentPath = (_b = (_a = currentModel == null ? void 0 : currentModel.uri) == null ? void 0 : _a.path) == null ? void 0 : _b.slice(1);
+    if (currentPath === targetFilePath) return;
+    if (currentPath) {
+      const vs = editor.saveViewState();
+      if (vs) viewStateCacheRef.current.set(currentPath, vs);
+    }
+    let model = modelCacheRef.current.get(targetFilePath);
+    if (!model || model.isDisposed()) {
+      model = ensureModel(targetFilePath);
+    }
+    editor.setModel(model);
+    const cachedVs = viewStateCacheRef.current.get(targetFilePath);
+    if (cachedVs) {
+      editor.restoreViewState(cachedVs);
+    }
+    editor.focus();
+  }, [ensureModel]);
+  reactExports.useEffect(() => {
+    if (!roomId || !filePath) return;
+    switchToFile(filePath);
+    const model = modelCacheRef.current.get(filePath);
+    if (model && model.getValue() === "") {
+      projectFileService.getFiles(roomId).then((res) => {
+        const files = res.data;
+        const file = files.find((f2) => f2.filePath === filePath);
+        const content = file && typeof file.content === "string" ? file.content : "";
+        if (model.getValue() === "") {
+          model.setValue(content);
+          onDirtyChange == null ? void 0 : onDirtyChange(filePath, false);
+        }
+      }).catch((err) => {
+        console.error("[Editor] Failed to load file content:", err);
+      });
+    }
   }, [roomId, filePath]);
-  const pendingContentRef = reactExports.useRef(null);
+  const queueOutgoingDelta = reactExports.useCallback((changes) => {
+    outgoingQueueRef.current.push(...changes);
+    if (outgoingTimerRef.current) clearTimeout(outgoingTimerRef.current);
+    outgoingTimerRef.current = setTimeout(() => {
+      flushOutgoingDelta();
+    }, OUTGOING_DEBOUNCE_MS);
+  }, []);
+  const flushOutgoingDelta = reactExports.useCallback(() => {
+    outgoingTimerRef.current = null;
+    const queue = outgoingQueueRef.current;
+    if (queue.length === 0) return;
+    outgoingQueueRef.current = [];
+    const client2 = stompRef.current;
+    if (!(client2 == null ? void 0 : client2.active) || !(client2 == null ? void 0 : client2.connected)) return;
+    const payloadChanges = queue.map((c) => ({
+      startLineNumber: c.range.startLineNumber,
+      startColumn: c.range.startColumn,
+      endLineNumber: c.range.endLineNumber,
+      endColumn: c.range.endColumn,
+      rangeLength: c.rangeLength,
+      text: c.text,
+      rangeOffset: c.rangeOffset
+    }));
+    client2.publish({
+      destination: SEND_DEST,
+      body: JSON.stringify({
+        roomId,
+        filePath: filePathRef.current,
+        clientId: clientIdRef.current,
+        type: "delta",
+        changes: payloadChanges
+      })
+    });
+  }, [roomId]);
+  const sendFullSync = reactExports.useCallback(() => {
+    const editor = editorRef.current;
+    const client2 = stompRef.current;
+    if (!editor || !(client2 == null ? void 0 : client2.active) || !(client2 == null ? void 0 : client2.connected)) return;
+    const currentPath = filePathRef.current;
+    const content = editor.getValue();
+    client2.publish({
+      destination: SEND_DEST,
+      body: JSON.stringify({
+        roomId,
+        filePath: currentPath,
+        clientId: clientIdRef.current,
+        type: "full",
+        content
+      })
+    });
+    onDirtyChange == null ? void 0 : onDirtyChange(currentPath, false);
+  }, [roomId, onDirtyChange]);
+  reactExports.useEffect(() => {
+    if (!roomId || !filePath) return;
+    fullSyncTimerRef.current = setInterval(() => {
+      sendFullSync();
+    }, FULL_SYNC_INTERVAL_MS);
+    return () => clearInterval(fullSyncTimerRef.current);
+  }, [roomId, filePath, sendFullSync]);
   reactExports.useEffect(() => {
     if (!roomId) return;
     const token = localStorage.getItem("token");
@@ -16400,8 +16566,10 @@ const Editor = React.forwardRef(({ roomId, filePath, onConnectionChange }, ref2)
       webSocketFactory: () => new SockJS(WS_URL$1),
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5e3,
+      debug: () => {
+      },
+      // Disable STOMP debug logging in production
       onConnect: () => {
-        console.log("[Editor] WebSocket connected");
         onConnectionChange == null ? void 0 : onConnectionChange(true);
         subscriptionRef.current = client2.subscribe(
           `${TOPIC_PREFIX}${roomId}`,
@@ -16409,16 +16577,12 @@ const Editor = React.forwardRef(({ roomId, filePath, onConnectionChange }, ref2)
         );
       },
       onDisconnect: () => {
-        console.log("[Editor] WebSocket disconnected");
         onConnectionChange == null ? void 0 : onConnectionChange(false);
       },
       onStompError: (frame) => {
-        var _a;
-        console.error("[Editor] STOMP error:", (_a = frame.headers) == null ? void 0 : _a.message);
         onConnectionChange == null ? void 0 : onConnectionChange(false);
       },
-      onWebSocketError: (evt) => {
-        console.error("[Editor] WebSocket error:", evt);
+      onWebSocketError: () => {
         onConnectionChange == null ? void 0 : onConnectionChange(false);
       }
     });
@@ -16426,6 +16590,7 @@ const Editor = React.forwardRef(({ roomId, filePath, onConnectionChange }, ref2)
     stompRef.current = client2;
     return () => {
       var _a;
+      if (outgoingTimerRef.current) clearTimeout(outgoingTimerRef.current);
       if (subscriptionRef.current) {
         subscriptionRef.current.unsubscribe();
         subscriptionRef.current = null;
@@ -16439,68 +16604,68 @@ const Editor = React.forwardRef(({ roomId, filePath, onConnectionChange }, ref2)
   }, [roomId]);
   const handleIncomingMessage = reactExports.useCallback((frame) => {
     try {
-      const data = JSON.parse(frame.body);
-      if (data.filePath === filePathRef.current) {
-        const content = typeof data.content === "string" ? data.content : "";
-        applyRemoteContent(content);
+      const msg = JSON.parse(frame.body);
+      if (msg.clientId === clientIdRef.current) return;
+      if (msg.filePath !== filePathRef.current) return;
+      const editor = editorRef.current;
+      if (!editor) return;
+      if (msg.type === "delta" && Array.isArray(msg.changes)) {
+        applyRemoteDelta(msg.changes);
+      } else if (msg.type === "full" && typeof msg.content === "string") {
+        applyRemoteFullContent(msg.content);
       }
     } catch (err) {
-      console.error("[Editor] Failed to parse incoming message:", err);
+      console.error("[Editor] Failed to process incoming message:", err);
     }
   }, []);
-  const filePathRef = reactExports.useRef(filePath);
-  reactExports.useEffect(() => {
-    filePathRef.current = filePath;
-  }, [filePath]);
-  const applyRemoteContent = (content) => {
+  const applyRemoteDelta = reactExports.useCallback((changes) => {
     const editor = editorRef.current;
-    if (!editor) {
-      pendingContentRef.current = content;
-      return;
-    }
+    if (!editor) return;
+    isApplyingRemoteRef.current = true;
+    const monaco = monacoRef.current;
+    const operations = changes.map((c) => ({
+      range: new monaco.Range(
+        c.startLineNumber,
+        c.startColumn,
+        c.endLineNumber,
+        c.endColumn
+      ),
+      text: c.text,
+      forceMoveMarkers: true
+    }));
+    editor.executeEdits("remote", operations);
+    isApplyingRemoteRef.current = false;
+  }, []);
+  const applyRemoteFullContent = reactExports.useCallback((content) => {
+    const editor = editorRef.current;
+    if (!editor) return;
     const model = editor.getModel();
-    if (!model) return;
-    if (model.getValue() === content) return;
+    if (!model || model.getValue() === content) return;
+    isApplyingRemoteRef.current = true;
     const savedSelections = editor.getSelections();
-    const savedScrollTop = editor.getScrollTop();
-    const savedScrollLeft = editor.getScrollLeft();
-    isRemoteRef.current = true;
     model.pushEditOperations(
       savedSelections,
       [{ range: model.getFullModelRange(), text: content }],
       () => savedSelections
     );
-    isRemoteRef.current = false;
-    editor.setScrollTop(savedScrollTop);
-    editor.setScrollLeft(savedScrollLeft);
-  };
-  const handleEditorDidMount = (editor, monaco) => {
-    editorRef.current = editor;
-    monacoRef.current = monaco;
-    if (pendingContentRef.current !== null) {
-      applyRemoteContent(pendingContentRef.current);
-      pendingContentRef.current = null;
-    }
-  };
-  const handleEditorChange = reactExports.useCallback((value) => {
-    if (isRemoteRef.current) return;
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => {
-      const client2 = stompRef.current;
-      if (!(client2 == null ? void 0 : client2.active) || !(client2 == null ? void 0 : client2.connected)) return;
-      client2.publish({
-        destination: SEND_DEST,
-        body: JSON.stringify({ roomId, filePath: filePathRef.current, content: value ?? "" })
-      });
-    }, DEBOUNCE_MS);
-  }, [roomId]);
+    isApplyingRemoteRef.current = false;
+  }, []);
   reactExports.useEffect(() => {
     return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
-      if (editorRef.current) {
-        editorRef.current.dispose();
-        editorRef.current = null;
+      if (outgoingTimerRef.current) clearTimeout(outgoingTimerRef.current);
+      if (fullSyncTimerRef.current) clearInterval(fullSyncTimerRef.current);
+      if (changeListenerRef.current) {
+        changeListenerRef.current.dispose();
+        changeListenerRef.current = null;
       }
+      modelCacheRef.current.forEach((m2) => {
+        try {
+          m2.dispose();
+        } catch (e) {
+        }
+      });
+      modelCacheRef.current.clear();
+      viewStateCacheRef.current.clear();
     };
   }, []);
   return /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -16508,10 +16673,10 @@ const Editor = React.forwardRef(({ roomId, filePath, onConnectionChange }, ref2)
     {
       height: "100%",
       width: "100%",
-      path: filePath,
+      path: STABLE_PATH,
       theme: "vs-dark",
+      defaultValue: "",
       onMount: handleEditorDidMount,
-      onChange: handleEditorChange,
       options: {
         fontSize: 14,
         fontFamily: '"Fira Code", "Cascadia Code", Menlo, monospace',
@@ -16528,6 +16693,10 @@ const Editor = React.forwardRef(({ roomId, filePath, onConnectionChange }, ref2)
         bracketPairColorization: { enabled: true },
         guides: { bracketPairs: true },
         padding: { top: 12, bottom: 12 },
+        overviewRulerLanes: 0,
+        occurrencesHighlight: "off",
+        selectionHighlight: false,
+        codeLens: false,
         scrollbar: {
           vertical: "auto",
           horizontal: "auto",
@@ -16538,7 +16707,7 @@ const Editor = React.forwardRef(({ roomId, filePath, onConnectionChange }, ref2)
       }
     }
   );
-});
+}));
 const ContextMenu = ({ x: x2, y: y2, items, onClose }) => {
   const menuRef = reactExports.useRef(null);
   reactExports.useEffect(() => {
@@ -24881,6 +25050,14 @@ const RoomIDE = ({ roomId, nodes, tree, createNode, renameNode, moveNode, delete
   const [activeFile, setActiveFile] = reactExports.useState(null);
   const [openTabs, setOpenTabs] = reactExports.useState([]);
   const [dirtyTabs, setDirtyTabs] = reactExports.useState(/* @__PURE__ */ new Set());
+  const handleDirtyChange = reactExports.useCallback((filePath, isDirty) => {
+    setDirtyTabs((prev) => {
+      const next = new Set(prev);
+      if (isDirty) next.add(filePath);
+      else next.delete(filePath);
+      return next;
+    });
+  }, []);
   const fileNodes = nodes.filter((n2) => n2.fileType !== "DIRECTORY");
   const openFile = reactExports.useCallback((filePath) => {
     const node = nodes.find((n2) => n2.filePath === filePath);
@@ -25048,18 +25225,22 @@ const RoomIDE = ({ roomId, nodes, tree, createNode, renameNode, moveNode, delete
               }
             )
           ] }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "flex-1 overflow-hidden flex flex-col relative bg-[#1e1e1e]/80", children: activeFile ? /* @__PURE__ */ jsxRuntimeExports.jsx(
-            Editor,
-            {
-              ref: editorRef,
-              roomId,
-              filePath: activeFile,
-              onConnectionChange: setConnected
-            }
-          ) : /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 flex flex-col items-center justify-center gap-4 text-gray-500", children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-8 h-8 text-gray-600", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" }) }) }),
-            /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", children: "Select or create a file to start coding" })
-          ] }) })
+          /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "flex-1 overflow-hidden flex flex-col relative bg-[#1e1e1e]/80", children: [
+            /* @__PURE__ */ jsxRuntimeExports.jsx(
+              Editor,
+              {
+                ref: editorRef,
+                roomId,
+                filePath: activeFile || "",
+                onConnectionChange: setConnected,
+                onDirtyChange: handleDirtyChange
+              }
+            ),
+            !activeFile && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { className: "absolute inset-0 flex flex-col items-center justify-center gap-4 text-gray-500 bg-[#1e1e1e]/80 z-10", children: [
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5", children: /* @__PURE__ */ jsxRuntimeExports.jsx("svg", { className: "w-8 h-8 text-gray-600", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", children: /* @__PURE__ */ jsxRuntimeExports.jsx("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" }) }) }),
+              /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "text-sm", children: "Select or create a file to start coding" })
+            ] })
+          ] })
         ] }),
         /* @__PURE__ */ jsxRuntimeExports.jsx("div", { className: "h-64 glass-panel border border-white/5 shadow-2xl rounded-xl overflow-hidden shrink-0", children: /* @__PURE__ */ jsxRuntimeExports.jsx(TerminalPanel, { ref: terminalRef, files: fileNodes }) })
       ] })

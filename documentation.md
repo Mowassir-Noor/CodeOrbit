@@ -39,7 +39,7 @@ Browser (Spring Boot Thymeleaf Shell + React Fragments)
 **Workflow:**
 - **Hybrid Rendering**: Thymeleaf manages the global application shell and navigation layout, while React is dynamically mounted inside specific pages (Dashboard, Room) for high interactivity.
 - **Persistence**: Files and folders are stored in PostgreSQL as a parent-child adjacency list.
-- **Editor Sync**: Real-time keystrokes broadcast via `/topic/code/{roomId}` to all room members.
+- **Editor Sync**: Incremental delta changes broadcast via `/topic/code/{roomId}` with `clientId`-filtered echo prevention. Only changed ranges are transmitted (not full file content), and DB persistence is deferred to a 3s periodic full-sync to avoid write load during rapid typing.
 - **FS Sync**: Create/rename/move/delete operations broadcast typed `FileSystemEvent` payloads via `/topic/fs/{roomId}`.
 - **Execution**: Code runs via backend execution service (Docker-style sandbox) supporting Python, JavaScript, TypeScript, C, C++, Rust, Go, and Java. Output streams directly to xterm.js terminal.
 
@@ -68,7 +68,8 @@ Browser (Spring Boot Thymeleaf Shell + React Fragments)
 | Styling | Tailwind CSS |
 | Interactivity | Alpine.js (for simple shell interactions) |
 | Animations | GSAP (GreenSock Animation Platform) |
-| Editor | Monaco Editor (`@monaco-editor/react`) |
+| Editor | Monaco Editor (`@monaco-editor/react`) with `editor.setModel()` model cache |
+| Icons | Inline SVG (cross-browser, no emoji fonts) |
 | Execution | WebContainer API (StackBlitz) |
 | Terminal | xterm.js + FitAddon |
 | WebSocket | `@stomp/stompjs` + SockJS-client |
@@ -117,7 +118,7 @@ enums/
   └── FileType.java                   # FILE | DIRECTORY
 
 model/
-  ├── CodeMessage.java                # roomId + filePath + content
+  ├── CodeMessage.java                # roomId + filePath + clientId + type ("full"/"delta") + changes[]
   └── FileSystemEvent.java            # Typed FS event (8 event types)
 
 repository/
@@ -211,9 +212,17 @@ JWT is sent in the STOMP `CONNECT` frame headers via `WebSocketAuthInterceptor`.
 ## Real-Time Collaboration
 
 ### Editor Sync — `/topic/code/{roomId}`
-- **Publish**: `POST /app/code.send` with `{ roomId, filePath, content }`
-- **Receive**: All room subscribers receive the full file content and apply it with `pushEditOperations` (preserves cursor, undo history)
-- **Debounce**: 350ms client-side before publishing
+- **Publish (Delta)**: `POST /app/code.send` with `{ roomId, filePath, clientId, type: "delta", changes: [{range, text}] }`
+  - Only changed ranges are sent (not full content)
+  - Accumulated changes are flushed every **500ms**
+  - The `clientId` field prevents the sender from reapplying its own broadcast
+- **Publish (Full)**: `POST /app/code.send` with `{ roomId, filePath, clientId, type: "full", content }`
+  - Used for initial load, tab switch, and periodic auto-save (every **3s**)
+  - This is the only type that triggers a DB `saveFile()` write
+- **Receive (Delta)**: Remote clients apply via `editor.executeEdits('remote', ops)` — true incremental, no full reparse
+- **Receive (Full)**: Applied via `model.pushEditOperations(...)` preserving cursor, undo history
+- **Echo Prevention**: Messages with `clientId === localClientId` are silently ignored
+- **Model Cache**: One Monaco `ITextModel` per file path is stored in a `Map`; switching tabs uses `editor.setModel()` instead of recreating models
 
 ### Filesystem Events — `/topic/fs/{roomId}`
 All filesystem mutations (create, rename, move, delete) broadcast a `FileSystemEvent` to every room member. The `useFileSystem` hook subscribes and applies each event optimistically to the local node list.
@@ -488,15 +497,18 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 
 ### `FileTree.jsx`
 - Recursive `TreeNode` component (`React.memo`)
+- **SVG icons** for all file/folder types (cross-browser, no emoji dependency)
+- `FolderIcon` (open/closed states) and `FileIcon` (color-coded by extension) components
 - Inline `InlineInput` for rename and new node creation
 - Native HTML5 drag/drop for move operations
-- `ContextMenu` on right-click
+- `ContextMenu` on right-click with SVG action icons (New File, New Folder, Rename, Copy Path, Delete)
 - `DeleteModal` confirmation before delete
 - Keyboard: `F2` rename, `Delete` delete
 
 ### `TabBar.jsx`
 - Scrollable tab strip
 - Active tab highlighted with blue top border
+- **SVG file icons** with color-coded extension labels
 - Middle-click or `×` button closes tab
 - Dirty state dot indicator
 
@@ -505,11 +517,16 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 - Dismisses on outside click or `Escape`
 - Position-clamped to viewport bounds
 
-### `Editor.jsx`
-- Monaco Editor with STOMP sync
-- Debounced 350ms outgoing publishes
-- `pushEditOperations` for cursor-safe remote updates
-- `useImperativeHandle` exposes `getValue()` for run engine
+### `Editor.jsx` (High-Performance Collaborative)
+- **Wrapped with `React.memo`** — zero re-renders during typing; all mutable state lives in `useRef`
+- **Incremental delta sync** via `editor.onDidChangeModelContent` → STOMP `changes[]` (not full content)
+- **Model cache** (`Map<filePath, ITextModel>`) — models are reused on tab switches via `editor.setModel()`
+- **View state cache** (`Map<filePath, IEditorViewState>`) — scroll position and cursor restored on tab switch
+- **Echo prevention** via `clientId` comparison on incoming messages
+- **Outgoing debounce**: 500ms for delta, 3s periodic auto-save for full sync
+- **Optimized Monaco options**: `minimap: false`, `overviewRulerLanes: 0`, `occurrencesHighlight: 'off'`, `selectionHighlight: false`, `codeLens: false`, `cursorSmoothCaretAnimation: 'on'`
+- `useImperativeHandle` exposes `getValue()`, `getModel()`, `forceSave()`
+- Forward-compatible with future Yjs/CRDT integration (same `changes` payload shape)
 
 ### `TerminalPanel.jsx`
 - WebContainer boot (singleton across tab) for interactive shell
@@ -591,13 +608,13 @@ npm run build
 
 | Constraint | Detail |
 |---|---|
-| **Conflict Resolution** | Last-Writer-Wins for editor content. No OT/CRDT. |
+| **Conflict Resolution** | Last-Writer-Wins for editor content. Incremental delta sync reduces collision surface vs full-content sync. Future Yjs/CRDT integration is architecturally prepared. |
 | **Container Ephemerality** | `npm install` results in terminal are not persisted to PostgreSQL. |
 | **Binary Files** | Text-based source files only. |
 | **COOP/COEP Headers** | Required for WebContainers terminal; may conflict with some browser extensions. |
 | **Backend Execution** | Requires Python, Node.js, GCC, G++, Rust, Go, and Java installed on server. Use the provided Dockerfile for a fully-equipped production image. |
 | **Rename Race Condition** | Concurrent renames of the same folder by two users resolve to last write. |
-| **Cursor Awareness** | Multi-cursor presence (ghost cursors) not yet implemented. |
+| **Cursor Awareness** | Multi-cursor presence (ghost cursors) not yet implemented. Client echo filtering prevents cursor jumps from self-broadcasts. |
 
 ---
 

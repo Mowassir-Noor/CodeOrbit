@@ -135,6 +135,16 @@ const RoomIDE = ({ roomId, nodes, tree, createNode, renameNode, moveNode, delete
     const [openTabs, setOpenTabs] = useState([]);
     const [dirtyTabs, setDirtyTabs] = useState(new Set());
 
+    // Stable dirty-tracking callback for Editor (avoids re-renders via React.memo)
+    const handleDirtyChange = useCallback((filePath, isDirty) => {
+        setDirtyTabs(prev => {
+            const next = new Set(prev);
+            if (isDirty) next.add(filePath);
+            else next.delete(filePath);
+            return next;
+        });
+    }, []);
+
     // Only FILE nodes (not DIRECTORY) are valid to open in editor
     const fileNodes = nodes.filter(n => n.fileType !== 'DIRECTORY');
 
@@ -326,17 +336,17 @@ const RoomIDE = ({ roomId, nodes, tree, createNode, renameNode, moveNode, delete
                             </button>
                         </div>
 
-                        {/* Editor */}
+                        {/* Editor — always mounted so model cache survives tab switches */}
                         <div className="flex-1 overflow-hidden flex flex-col relative bg-[#1e1e1e]/80">
-                            {activeFile ? (
-                                <Editor
-                                    ref={editorRef}
-                                    roomId={roomId}
-                                    filePath={activeFile}
-                                    onConnectionChange={setConnected}
-                                />
-                            ) : (
-                                <div className="flex-1 flex flex-col items-center justify-center gap-4 text-gray-500">
+                            <Editor
+                                ref={editorRef}
+                                roomId={roomId}
+                                filePath={activeFile || ''}
+                                onConnectionChange={setConnected}
+                                onDirtyChange={handleDirtyChange}
+                            />
+                            {!activeFile && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-gray-500 bg-[#1e1e1e]/80 z-10">
                                     <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5">
                                         <svg className="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
                                     </div>
