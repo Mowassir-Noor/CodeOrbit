@@ -41,11 +41,11 @@ public class ProjectFile {
     @Builder.Default
     private FileType fileType = FileType.FILE;
 
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", nullable = true)
     private String content;
 
     /** Yjs CRDT encoded state snapshot for collaborative editing convergence */
-    @Column(columnDefinition = "BYTEA")
+    @Column(columnDefinition = "BYTEA", nullable = true)
     @Lob
     private byte[] yjsState;
 

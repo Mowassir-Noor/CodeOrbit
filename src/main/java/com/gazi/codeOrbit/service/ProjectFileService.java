@@ -85,7 +85,7 @@ public class ProjectFileService {
                 .name(req.getName())
                 .parentId(req.getParentId())
                 .fileType(req.getFileType())
-                .content(req.getFileType() == FileType.FILE ? "" : null)
+                .content("")
                 .build();
         node = repo.save(node);
 
