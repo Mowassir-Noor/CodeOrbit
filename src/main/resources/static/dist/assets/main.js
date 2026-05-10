@@ -16484,6 +16484,11 @@ const Editor = reactExports.memo(React.forwardRef(({ roomId, filePath, onConnect
   }, [ensureModel]);
   reactExports.useEffect(() => {
     if (!roomId || !filePath) return;
+    if (outgoingTimerRef.current) {
+      clearTimeout(outgoingTimerRef.current);
+      outgoingTimerRef.current = null;
+    }
+    outgoingQueueRef.current = [];
     switchToFile(filePath);
     const model = modelCacheRef.current.get(filePath);
     if (model && model.getValue() === "") {
@@ -16492,7 +16497,9 @@ const Editor = reactExports.memo(React.forwardRef(({ roomId, filePath, onConnect
         const file = files.find((f2) => f2.filePath === filePath);
         const content = file && typeof file.content === "string" ? file.content : "";
         if (model.getValue() === "") {
+          isApplyingRemoteRef.current = true;
           model.setValue(content);
+          isApplyingRemoteRef.current = false;
           onDirtyChange == null ? void 0 : onDirtyChange(filePath, false);
         }
       }).catch((err) => {
@@ -16603,14 +16610,18 @@ const Editor = reactExports.memo(React.forwardRef(({ roomId, filePath, onConnect
     };
   }, [roomId]);
   const handleIncomingMessage = reactExports.useCallback((frame) => {
+    var _a, _b;
     try {
       const msg = JSON.parse(frame.body);
       if (msg.clientId === clientIdRef.current) return;
-      if (msg.filePath !== filePathRef.current) return;
       const editor = editorRef.current;
       if (!editor) return;
-      if (msg.type === "delta" && Array.isArray(msg.changes)) {
-        applyRemoteDelta(msg.changes);
+      const model = editor.getModel();
+      if (!model || model.isDisposed()) return;
+      const currentModelPath = (_b = (_a = model.uri) == null ? void 0 : _a.path) == null ? void 0 : _b.slice(1);
+      if (msg.filePath !== currentModelPath) return;
+      if (msg.type === "delta" && Array.isArray(msg.changes) && msg.changes.length > 0) {
+        applyRemoteDelta(msg.changes, msg.filePath);
       } else if (msg.type === "full" && typeof msg.content === "string") {
         applyRemoteFullContent(msg.content);
       }
@@ -16618,9 +16629,14 @@ const Editor = reactExports.memo(React.forwardRef(({ roomId, filePath, onConnect
       console.error("[Editor] Failed to process incoming message:", err);
     }
   }, []);
-  const applyRemoteDelta = reactExports.useCallback((changes) => {
+  const applyRemoteDelta = reactExports.useCallback((changes, targetFilePath) => {
+    var _a, _b;
     const editor = editorRef.current;
     if (!editor) return;
+    const model = editor.getModel();
+    if (!model || model.isDisposed()) return;
+    const currentPath = (_b = (_a = model.uri) == null ? void 0 : _a.path) == null ? void 0 : _b.slice(1);
+    if (currentPath !== targetFilePath) return;
     isApplyingRemoteRef.current = true;
     const monaco = monacoRef.current;
     const operations = changes.map((c) => ({
@@ -16640,7 +16656,7 @@ const Editor = reactExports.memo(React.forwardRef(({ roomId, filePath, onConnect
     const editor = editorRef.current;
     if (!editor) return;
     const model = editor.getModel();
-    if (!model || model.getValue() === content) return;
+    if (!model || model.isDisposed() || model.getValue() === content) return;
     isApplyingRemoteRef.current = true;
     const savedSelections = editor.getSelections();
     model.pushEditOperations(

@@ -142,6 +142,14 @@ const Editor = memo(React.forwardRef(({ roomId, filePath, onConnectionChange, on
     useEffect(() => {
         if (!roomId || !filePath) return;
 
+        // CRITICAL: Clear any pending outgoing deltas for the PREVIOUS file.
+        // Otherwise they would be flushed with the new filePath, corrupting the wrong file.
+        if (outgoingTimerRef.current) {
+            clearTimeout(outgoingTimerRef.current);
+            outgoingTimerRef.current = null;
+        }
+        outgoingQueueRef.current = [];
+
         // Switch to the model first (creates empty model if needed)
         switchToFile(filePath);
 
@@ -154,7 +162,11 @@ const Editor = memo(React.forwardRef(({ roomId, filePath, onConnectionChange, on
                     const file = files.find(f => f.filePath === filePath);
                     const content = file && typeof file.content === 'string' ? file.content : '';
                     if (model.getValue() === '') {
+                        // MUST guard with isApplyingRemoteRef so setValue doesn't
+                        // trigger onDidChangeModelContent → outgoing delta broadcast.
+                        isApplyingRemoteRef.current = true;
                         model.setValue(content);
+                        isApplyingRemoteRef.current = false;
                         onDirtyChange?.(filePath, false);
                     }
                 })
@@ -300,14 +312,19 @@ const Editor = memo(React.forwardRef(({ roomId, filePath, onConnectionChange, on
             // Filter self-messages (echo prevention)
             if (msg.clientId === clientIdRef.current) return;
 
-            // Ignore messages for other files
-            if (msg.filePath !== filePathRef.current) return;
-
             const editor = editorRef.current;
             if (!editor) return;
 
-            if (msg.type === 'delta' && Array.isArray(msg.changes)) {
-                applyRemoteDelta(msg.changes);
+            const model = editor.getModel();
+            if (!model || model.isDisposed()) return;
+
+            // Use the MODEL's URI as the ground-truth current file path.
+            // filePathRef can race during rapid tab switches.
+            const currentModelPath = model.uri?.path?.slice(1);
+            if (msg.filePath !== currentModelPath) return;
+
+            if (msg.type === 'delta' && Array.isArray(msg.changes) && msg.changes.length > 0) {
+                applyRemoteDelta(msg.changes, msg.filePath);
             } else if (msg.type === 'full' && typeof msg.content === 'string') {
                 applyRemoteFullContent(msg.content);
             }
@@ -317,9 +334,15 @@ const Editor = memo(React.forwardRef(({ roomId, filePath, onConnectionChange, on
     }, []);
 
     // ── 8. Apply Remote Delta (incremental, cursor-safe) ──
-    const applyRemoteDelta = useCallback((changes) => {
+    const applyRemoteDelta = useCallback((changes, targetFilePath) => {
         const editor = editorRef.current;
         if (!editor) return;
+
+        // Extra safety: verify we are still on the correct model
+        const model = editor.getModel();
+        if (!model || model.isDisposed()) return;
+        const currentPath = model.uri?.path?.slice(1);
+        if (currentPath !== targetFilePath) return;
 
         isApplyingRemoteRef.current = true;
 
@@ -346,7 +369,7 @@ const Editor = memo(React.forwardRef(({ roomId, filePath, onConnectionChange, on
         if (!editor) return;
 
         const model = editor.getModel();
-        if (!model || model.getValue() === content) return;
+        if (!model || model.isDisposed() || model.getValue() === content) return;
 
         isApplyingRemoteRef.current = true;
 
