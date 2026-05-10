@@ -45,7 +45,6 @@ public class ProjectFile {
     private String content;
 
     /** Yjs CRDT encoded state snapshot for collaborative editing convergence */
-    @Lob
     private byte[] yjsState;
 
     private LocalDateTime lastUpdated;
