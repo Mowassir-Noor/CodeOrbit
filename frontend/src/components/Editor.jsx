@@ -224,9 +224,10 @@ const Editor = memo(React.forwardRef(({ roomId, filePath, onConnectionChange, on
                 bindingCacheRef.current.set(filePath, binding);
             }
 
-            // Create STOMP provider for this file
+            // Create STOMP provider for this file (skip if already exists)
             const stomp = stompRef.current;
-            if (stomp?.active && stomp?.connected) {
+            if (stomp?.active && stomp?.connected && !providerCacheRef.current.has(filePath)) {
+                console.log('[Editor] Creating provider for', filePath);
                 const provider = new StompYjsProvider(
                     ydoc, stomp, roomId, filePath, clientIdRef.current
                 );
@@ -237,6 +238,8 @@ const Editor = memo(React.forwardRef(({ roomId, filePath, onConnectionChange, on
 
                 // Mark clean after initial load
                 onDirtyChange?.(filePath, false);
+            } else if (!stomp?.connected) {
+                console.log('[Editor] STOMP not connected yet, provider deferred for', filePath);
             }
         };
 
@@ -273,14 +276,29 @@ const Editor = memo(React.forwardRef(({ roomId, filePath, onConnectionChange, on
             webSocketFactory: () => new SockJS(WS_URL),
             connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
             reconnectDelay: 5000,
-            debug: () => {},
+            debug: (str) => {
+                if (localStorage.getItem('stomp-debug') === '1') console.log('[STOMP]', str);
+            },
 
             onConnect: () => {
                 onConnectionChange?.(true);
+                console.log('[Editor] STOMP connected, subscribing to', `${TOPIC_PREFIX}${roomId}`);
                 subscriptionRef.current = client.subscribe(
                     `${TOPIC_PREFIX}${roomId}`,
                     handleIncomingMessage
                 );
+
+                // Create providers for files already opened before STOMP connected
+                ydocCacheRef.current.forEach((ydoc, path) => {
+                    if (!providerCacheRef.current.has(path)) {
+                        console.log('[Editor] Creating deferred provider for', path);
+                        const provider = new StompYjsProvider(
+                            ydoc, client, roomId, path, clientIdRef.current
+                        );
+                        providerCacheRef.current.set(path, provider);
+                        provider.requestState();
+                    }
+                });
             },
 
             onDisconnect: () => {
@@ -317,14 +335,21 @@ const Editor = memo(React.forwardRef(({ roomId, filePath, onConnectionChange, on
     const handleIncomingMessage = useCallback((frame) => {
         try {
             const msg = JSON.parse(frame.body);
+            console.log('[Editor] Received msg type=', msg.type, 'file=', msg.filePath, 'from=', msg.clientId?.slice(0, 8));
 
             // Filter self-messages (echo prevention)
-            if (msg.clientId === clientIdRef.current) return;
+            if (msg.clientId === clientIdRef.current) {
+                console.log('[Editor] Ignoring self-message');
+                return;
+            }
 
             // Route to the Yjs provider for this file
             const provider = providerCacheRef.current.get(msg.filePath);
             if (provider) {
+                console.log('[Editor] Routing to provider for', msg.filePath);
                 provider.onRemoteMessage(msg);
+            } else {
+                console.warn('[Editor] No provider for file', msg.filePath, '- providers:', [...providerCacheRef.current.keys()]);
             }
         } catch (err) {
             console.error('[Editor] Failed to process incoming message:', err);

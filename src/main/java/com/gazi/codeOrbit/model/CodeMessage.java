@@ -28,6 +28,7 @@ public class CodeMessage {
     private String type; // "full" or "delta"
     private String content; // used when type="full"
     private List<ContentChange> changes; // used when type="delta"
+    private String update; // base64-encoded Yjs incremental update (used when type="yjs-update")
     private String yjsState; // base64-encoded Yjs document state (used when type="yjs-full" or "yjs-offer")
 
     /**
