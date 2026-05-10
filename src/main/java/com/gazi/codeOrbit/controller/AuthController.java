@@ -85,7 +85,6 @@ public class AuthController {
     @GetMapping("/oauth2/success")
     public ResponseEntity<?> oauth2Success(@AuthenticationPrincipal OAuth2User oauth2User) {
         String email = oauth2User.getAttribute("email");
-        String name = oauth2User.getAttribute("name");
 
         Optional<User> userOptional = userRepository.findByEmail(email);
         User user;

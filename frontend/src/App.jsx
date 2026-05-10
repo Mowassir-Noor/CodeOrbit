@@ -6,6 +6,27 @@ import OAuth2Redirect from './pages/OAuth2Redirect';
 import LandingPage from './landing/LandingPage';
 import Profile from './pages/Profile';
 
+const OAuthRedirect = () => {
+    useEffect(() => {
+        window.location.href = '/oauth2/authorization/google';
+    }, []);
+    return null;
+};
+
+const LoginRedirect = () => {
+    useEffect(() => {
+        window.location.href = '/login';
+    }, []);
+    return null;
+};
+
+const RegisterRedirect = () => {
+    useEffect(() => {
+        window.location.href = '/register';
+    }, []);
+    return null;
+};
+
 const PrivateRoute = ({ children }) => {
     const token = localStorage.getItem('token');
     
@@ -23,6 +44,8 @@ function App() {
         <Router>
             <Routes>
                 <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginRedirect />} />
+                <Route path="/register" element={<RegisterRedirect />} />
                 <Route path="/oauth2-redirect" element={<OAuth2Redirect />} />
                 <Route 
                     path="/dashboard" 

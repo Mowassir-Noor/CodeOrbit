@@ -26,8 +26,7 @@ public class User {
     @Enumerated(EnumType.STRING)
     private AuthProvider provider;
 
-    @Lob
-    @Column(name = "profile_image")
+    @Column(name = "profile_image", columnDefinition = "bytea")
     private byte[] profileImage;
 
     @Column(name = "profile_image_content_type")

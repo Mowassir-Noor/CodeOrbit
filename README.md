@@ -21,7 +21,7 @@
 - **Multi-language code execution** — Backend sandbox supporting Python, JavaScript, TypeScript, C, C++, Rust, Go, and Java with xterm.js terminal output
 - **Room access control** — Users can only access rooms they're members of; shareable join-by-link
 - **Closable editor tabs** — with dirty-state indicator and middle-click close
-- **JWT + Google OAuth2 authentication**
+- **JWT + GitHub OAuth2 authentication**
 - **Room sharing** — share a UUID room link; users can join and become members
 
 ---
@@ -43,27 +43,65 @@
 psql -U postgres -c "CREATE DATABASE codeorbit;"
 ```
 
-### 2. Frontend Build
+### 2. Configuration
 
-Since CodeOrbit uses a hybrid architecture, the React frontend must be built and injected into the Spring Boot static resources directory.
+Create `src/main/resources/application.properties` (gitignored):
 
-```bash
-cd frontend
-npm install
-npm run build
+```properties
+jwt.secret=${JWT_SECRET:your-secret}
+jwt.expiration=${JWT_EXPIRATION:86400000}
+server.port=${PORT:8080}
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/codeorbit}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:postgres}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:password}
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+spring.security.oauth2.client.registration.google.client-id=${GOOGLE_CLIENT_ID:dummy}
+spring.security.oauth2.client.registration.google.client-secret=${GOOGLE_CLIENT_SECRET:dummy}
 ```
 
-### 3. Start the Server
+### 3. Backend
 
 ```bash
-cd ..
 ./mvnw spring-boot:run
 # → http://localhost:8080
 ```
 
+### 4. Frontend (dev)
+
+```bash
+cd frontend
+npm install
+npm run dev
+# → http://localhost:5173
+```
+
+### 4. Frontend (production)
+
+```bash
+cd frontend
+npm run build
+# Output injected into src/main/resources/static/dist
+# Then Spring Boot serves everything on :8080
+```
+
+### 5. Docker (all-in-one)
+
+```bash
+docker build -t codeorbit .
+docker run -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host:5432/codeorbit \
+  -e SPRING_DATASOURCE_USERNAME=user \
+  -e SPRING_DATASOURCE_PASSWORD=pass \
+  -e JWT_SECRET=your-secret \
+  -e GOOGLE_CLIENT_ID=your-google-client-id \
+  -e GOOGLE_CLIENT_SECRET=your-google-client-secret \
+  codeorbit
+```
+
 > **Browser note**: Terminal uses WebContainers API which requires `SharedArrayBuffer`. Use **Chrome**, **Edge**, or **Firefox** (latest). The Spring Boot application sets the required `COOP`/`COEP` headers automatically.
 
-> **Backend requirements** | Python 3, Node.js, GCC, G++, Rust, Go, and Java must be installed on the server for code execution.
+> **Backend requirements** | Python 3, Node.js, GCC, G++, Rust, Go, and Java must be installed on the server for code execution. The provided Dockerfile includes all dependencies.
 
 ---
 
@@ -182,6 +220,8 @@ See [`documentation.md`](./documentation.md) for full details including:
 - Database schema (adjacency list FS model)
 - Filesystem cascade logic (rename, move, delete)
 - Frontend component architecture
+- Environment variable reference
+- Docker & cloud deployment guide
 - Known constraints
 
 ---

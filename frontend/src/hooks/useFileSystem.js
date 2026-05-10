@@ -3,7 +3,7 @@ import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import { projectFileService } from '../services/api';
 
-const WS_URL = 'http://localhost:8080/ws';
+const WS_URL = `${window.location.protocol}//${window.location.host}/ws`;
 
 /**
  * Builds a client-side tree from a flat array of ProjectFile nodes.

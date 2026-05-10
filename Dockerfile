@@ -1,61 +1,86 @@
-# Stage 1: Build Frontend
-FROM node:20-alpine AS build-frontend
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm install
-COPY frontend/ ./
-RUN npm run build
-
-# Stage 2: Build Backend
-FROM maven:3.9.6-eclipse-temurin-21 AS build-backend
-WORKDIR /app
-COPY pom.xml ./
-# Go offline to cache dependencies
-RUN mvn dependency:go-offline || true
-COPY src ./src
-# Create static directory and copy frontend build output into Spring Boot
-# Note: Vite outDir in this project points to '../src/main/resources/static/dist'
-RUN mkdir -p src/main/resources/static/dist
-COPY --from=build-frontend /app/src/main/resources/static/dist ./src/main/resources/static/dist
-# Package the application (skipping tests for faster production builds)
-RUN mvn clean package -DskipTests
-
-# Stage 3: Production Runtime Environment
-FROM eclipse-temurin:21-jdk-jammy
+# ─────────────────────────────────────────────
+# Stage 1: Build Frontend + Backend together
+# Vite outDir '../src/main/resources/static/dist' requires both
+# frontend/ and src/ to be siblings — handled here naturally.
+# ─────────────────────────────────────────────
+FROM maven:3.9.6-eclipse-temurin-21 AS build
 WORKDIR /app
 
-# Install execution dependencies (Python 3, GCC/G++, Go)
-RUN apt-get update && apt-get install -y \
-    curl \
-    build-essential \
-    python3 \
-    golang \
+# Install Node.js 20 for frontend build
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Node.js 20 and TypeScript (for TS execution)
+# Cache Maven dependencies
+COPY pom.xml ./
+RUN mvn dependency:go-offline -q || true
+
+# Build frontend (outDir resolves to /app/src/main/resources/static/dist)
+COPY frontend/package*.json ./frontend/
+RUN npm ci --prefix frontend
+COPY frontend/ ./frontend/
+RUN npm run build --prefix frontend
+
+# Build backend (frontend assets already in place)
+COPY src ./src
+RUN mvn clean package -DskipTests -q
+
+# ─────────────────────────────────────────────
+# Stage 3: Production Runtime
+# ─────────────────────────────────────────────
+FROM eclipse-temurin:21-jre-jammy
+WORKDIR /app
+
+# Install code execution dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    ca-certificates \
+    build-essential \
+    python3 \
+    python3-pip \
+    golang-go \
+    default-jdk \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js 20 + TypeScript/ts-node (for JS/TS execution)
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
+    && apt-get install -y --no-install-recommends nodejs \
     && npm install -g typescript ts-node \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Rust for all users
-ENV RUSTUP_HOME=/opt/rust
-ENV CARGO_HOME=/opt/cargo
-ENV PATH="/opt/cargo/bin:${PATH}"
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path \
-    && chmod -R a+w /opt/rust /opt/cargo
+# Install Rust (system-wide, non-interactive)
+ENV RUSTUP_HOME=/opt/rust \
+    CARGO_HOME=/opt/cargo \
+    PATH="/opt/cargo/bin:${PATH}"
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | \
+    sh -s -- -y --no-modify-path --profile minimal \
+    && chmod -R a+rx /opt/rust /opt/cargo
 
 # Create a non-root user for security
 RUN useradd -ms /bin/bash codeorbit
 
-COPY --from=build-backend /app/target/*.jar app.jar
+COPY --from=build /app/target/*.jar app.jar
 RUN chown codeorbit:codeorbit app.jar
 
-# Switch to the non-root user
 USER codeorbit
 
-# Expose Spring Boot default port
+# JVM tuning for container environments
+ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
+
+# Runtime environment variables (override at docker run / platform dashboard)
+ENV PORT=8080 \
+    SPRING_DATASOURCE_URL="" \
+    SPRING_DATASOURCE_USERNAME="" \
+    SPRING_DATASOURCE_PASSWORD="" \
+    JWT_SECRET="" \
+    JWT_EXPIRATION=86400000 \
+    GOOGLE_CLIENT_ID="" \
+    GOOGLE_CLIENT_SECRET=""
+
 EXPOSE 8080
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/actuator/health || exit 1
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]

@@ -7,7 +7,7 @@ import { projectFileService } from '../services/api';
 // ─────────────────────────────────────────────
 // Constants
 // ─────────────────────────────────────────────
-const WS_URL        = 'http://localhost:8080/ws';
+const WS_URL        = `${window.location.protocol}//${window.location.host}/ws`;
 const TOPIC_PREFIX  = '/topic/code/';
 const SEND_DEST     = '/app/code.send';
 const DEBOUNCE_MS   = 350;

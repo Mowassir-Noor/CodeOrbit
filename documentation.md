@@ -52,7 +52,7 @@ Browser (Spring Boot Thymeleaf Shell + React Fragments)
 |---|---|
 | Language | Java 21 |
 | Framework | Spring Boot 4.0.6 |
-| Security | Spring Security 6 + JWT + OAuth2 (Google) |
+| Security | Spring Security 6 + JWT + OAuth2 (GitHub) |
 | WebSocket | Spring WebSocket (STOMP), SockJS |
 | Persistence | Spring Data JPA / Hibernate |
 | Database | PostgreSQL (primary) / H2 (dev fallback) |
@@ -113,7 +113,7 @@ entity/
   └── ProjectFile.java                # Hierarchical node (file or folder)
 
 enums/
-  ├── AuthProvider.java               # LOCAL | GOOGLE
+  ├── AuthProvider.java               # LOCAL | GOOGLE | GITHUB
   └── FileType.java                   # FILE | DIRECTORY
 
 model/
@@ -183,9 +183,13 @@ services/
 3. React components read `localStorage` and attach as `Authorization: Bearer <token>` to every HTTP and WebSocket request.
 
 ### OAuth2 (Google)
-1. Frontend redirects to `/oauth2/authorization/google`
-2. Spring Security handles the exchange
-3. Redirects to `/oauth2-redirect?token=<jwt>` — stored in `localStorage`
+1. Frontend `/login` or `/register` redirects to `/login` (Thymeleaf — same origin, no hardcoded host)
+2. User clicks "Sign in with Google" → `/oauth2/authorization/google`
+3. Spring Security handles the OAuth2 exchange with Google
+4. On success, redirects to `/oauth2-redirect?token=<jwt>` — React stores token in `localStorage`
+
+> Configure `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` env vars (or `application.properties` defaults).
+> Google OAuth callback URI: `https://<your-domain>/login/oauth2/code/google`
 
 ### WebSocket Auth
 JWT is sent in the STOMP `CONNECT` frame headers via `WebSocketAuthInterceptor`.
@@ -305,7 +309,7 @@ CREATE TABLE users (
   email               VARCHAR NOT NULL UNIQUE,
   password            VARCHAR,
   provider            VARCHAR NOT NULL DEFAULT 'LOCAL',
-  profile_image       OID,        -- BLOB storage
+  profile_image       BYTEA,      -- binary image storage
   profile_image_type  VARCHAR,
   profile_image_name  VARCHAR,
   profile_updated_at  TIMESTAMP
@@ -524,19 +528,44 @@ CREATE INDEX idx_pf_path   ON project_files (file_path);
 psql -U postgres -c "CREATE DATABASE codeorbit;"
 ```
 
-### 2. Backend
+### 2. Environment
+
+Create `src/main/resources/application.properties` (gitignored) or set env vars:
+
+```properties
+jwt.secret=${JWT_SECRET:your-secret-key}
+jwt.expiration=${JWT_EXPIRATION:86400000}
+server.port=${PORT:8080}
+spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/codeorbit}
+spring.datasource.username=${SPRING_DATASOURCE_USERNAME:postgres}
+spring.datasource.password=${SPRING_DATASOURCE_PASSWORD:password}
+spring.security.oauth2.client.registration.google.client-id=${GOOGLE_CLIENT_ID:dummy}
+spring.security.oauth2.client.registration.google.client-secret=${GOOGLE_CLIENT_SECRET:dummy}
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.PostgreSQLDialect
+```
+
+### 3. Backend
 ```bash
 # From project root
 ./mvnw spring-boot:run
 # Runs on http://localhost:8080
 ```
 
-### 3. Frontend
+### 4. Frontend (dev)
 ```bash
 cd frontend
 npm install
 npm run dev
 # Runs on http://localhost:5173
+```
+
+### 4. Frontend (production build)
+```bash
+cd frontend
+npm run build
+# Output goes to ../src/main/resources/static/dist
+# Then the Spring Boot app serves everything on :8080
 ```
 
 > **WebContainer requirement**: Use Chrome, Edge, or Firefox with SharedArrayBuffer enabled.
@@ -552,6 +581,33 @@ npm run dev
 | **Container Ephemerality** | `npm install` results in terminal are not persisted to PostgreSQL. |
 | **Binary Files** | Text-based source files only. |
 | **COOP/COEP Headers** | Required for WebContainers terminal; may conflict with some browser extensions. |
-| **Backend Execution** | Requires Python, Node.js, GCC, G++, Rust, Go, and Java installed on server. |
+| **Backend Execution** | Requires Python, Node.js, GCC, G++, Rust, Go, and Java installed on server. Use the provided Dockerfile for a fully-equipped production image. |
 | **Rename Race Condition** | Concurrent renames of the same folder by two users resolve to last write. |
 | **Cursor Awareness** | Multi-cursor presence (ghost cursors) not yet implemented. |
+
+---
+
+## Deployment
+
+### Docker (single container)
+
+```bash
+# Build
+docker build -t codeorbit .
+
+# Run (with env vars)
+docker run -p 8080:8080 \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://host:5432/codeorbit \
+  -e SPRING_DATASOURCE_USERNAME=user \
+  -e SPRING_DATASOURCE_PASSWORD=pass \
+  -e JWT_SECRET=your-secret \
+  -e GOOGLE_CLIENT_ID=your-google-client-id \
+  -e GOOGLE_CLIENT_SECRET=your-google-client-secret \
+  codeorbit
+```
+
+### Render / Railway / Fly.io
+
+1. Set the environment variables above in the platform dashboard.
+2. Point the build to the repo root (the multi-stage `Dockerfile` handles everything).
+3. Google OAuth callback URL must be set to `https://<your-domain>/login/oauth2/code/google` in your Google Cloud Console OAuth App settings.
