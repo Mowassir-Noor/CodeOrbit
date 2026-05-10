@@ -52,7 +52,7 @@ Browser (Spring Boot Thymeleaf Shell + React Fragments)
 |---|---|
 | Language | Java 21 |
 | Framework | Spring Boot 4.0.6 |
-| Security | Spring Security 6 + JWT + OAuth2 (GitHub) |
+| Security | Spring Security 6 + JWT + OAuth2 (Google) |
 | WebSocket | Spring WebSocket (STOMP), SockJS |
 | Persistence | Spring Data JPA / Hibernate |
 | Database | PostgreSQL (primary) / H2 (dev fallback) |
@@ -113,7 +113,7 @@ entity/
   └── ProjectFile.java                # Hierarchical node (file or folder)
 
 enums/
-  ├── AuthProvider.java               # LOCAL | GOOGLE | GITHUB
+  ├── AuthProvider.java               # LOCAL | GOOGLE | GITHUB (GOOGLE active for OAuth2)
   └── FileType.java                   # FILE | DIRECTORY
 
 model/
@@ -157,7 +157,7 @@ components/
   ├── FileTree.jsx        # VS Code-style recursive tree explorer
   ├── TabBar.jsx          # Closable editor tabs with dirty state
   ├── TerminalPanel.jsx   # WebContainer shell + xterm.js
-  └── SplineBackground.jsx # 3D landing page with animated keycaps
+  └── (landing components are in landing/)
 
 hooks/
   ├── useBackendRunner.js # Multi-language execution via backend API
@@ -168,6 +168,18 @@ pages/
   ├── OAuth2Redirect.jsx  # Handles Google login token redirect
   ├── Profile.jsx         # User profile page (mounted via profile.html)
   └── Room.jsx            # Full IDE layout (mounted via room.html)
+
+landing/
+  ├── LandingPage.jsx       # Main landing page composition
+  ├── SplineBackground.jsx  # 3D Spline scene renderer
+  ├── LandingHeader.jsx     # Fixed navbar for landing
+  ├── LandingFooter.jsx     # Footer for landing
+  └── sections/
+      ├── HeroSection.jsx       # Hero with CTA
+      ├── TechStackSection.jsx  # Technology showcase
+      ├── FeaturesSection.jsx   # Feature cards
+      ├── ArchitectureSection.jsx # System architecture diagram
+      └── CTASection.jsx        # Call-to-action footer
 
 services/
   └── api.js              # Axios client with JWT interceptor + all FS endpoints
@@ -261,7 +273,7 @@ Every FS operation is mirrored to the in-browser WebContainer:
 
 ## Code Execution (Multi-Language Backend)
 
-CodeOrbit features a **backend code execution service** that runs code in isolated temporary directories with support for 8 languages.
+CodeOrbit features a **backend code execution service** that runs code in isolated temporary directories with support for 10 languages.
 
 ### Supported Languages
 
@@ -272,6 +284,8 @@ CodeOrbit features a **backend code execution service** that runs code in isolat
 | TypeScript | `npx ts-node` / `tsc` | `.ts`, `.tsx` | Transpiled |
 | C | `gcc` | `.c` | Compiled |
 | C++ | `g++` | `.cpp`, `.cc`, `.cxx` | Compiled |
+| Ruby | `ruby` | `.rb` | N/A |
+| PHP | `php` | `.php` | N/A |
 | Rust | `rustc` | `.rs` | Compiled |
 | Go | `go run` | `.go` | Compiled |
 | Java | `javac` → `java` | `.java` | Compiled |
@@ -310,9 +324,9 @@ CREATE TABLE users (
   password            VARCHAR,
   provider            VARCHAR NOT NULL DEFAULT 'LOCAL',
   profile_image       BYTEA,      -- binary image storage
-  profile_image_type  VARCHAR,
-  profile_image_name  VARCHAR,
-  profile_updated_at  TIMESTAMP
+  profile_image_content_type VARCHAR,
+  profile_image_file_name    VARCHAR,
+  profile_image_updated_at   TIMESTAMP
 );
 
 -- Rooms

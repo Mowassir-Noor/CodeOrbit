@@ -18,10 +18,10 @@
 - **VS Code–style file explorer** — hierarchical folders, inline rename (F2), drag-and-drop move, context menu, file-type icons
 - **Recursive folder operations** — create, rename, move, and delete folders with all descendants in one action
 - **Live filesystem sync** — every create/rename/move/delete is broadcast to all room members in real-time via `/topic/fs/{roomId}`
-- **Multi-language code execution** — Backend sandbox supporting Python, JavaScript, TypeScript, C, C++, Rust, Go, and Java with xterm.js terminal output
+- **Multi-language code execution** — Backend sandbox supporting Python, JavaScript, TypeScript, C, C++, Rust, Go, Java, Ruby, and PHP with xterm.js terminal output
 - **Room access control** — Users can only access rooms they're members of; shareable join-by-link
 - **Closable editor tabs** — with dirty-state indicator and middle-click close
-- **JWT + GitHub OAuth2 authentication**
+- **JWT + Google OAuth2 authentication**
 - **Room sharing** — share a UUID room link; users can join and become members
 
 ---
