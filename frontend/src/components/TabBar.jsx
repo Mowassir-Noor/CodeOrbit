@@ -1,15 +1,30 @@
 import React, { useRef } from 'react';
 
-const getFileIcon = (name) => {
-    const ext = name?.split('.').pop()?.toLowerCase();
-    const icons = {
-        js: '🟨', jsx: '⚛️', ts: '🔷', tsx: '⚛️',
-        java: '☕', py: '🐍', json: '📋', html: '🌐',
-        css: '🎨', scss: '🎨', md: '📝', sh: '🖥️',
-        txt: '📄', xml: '📄', yml: '⚙️', yaml: '⚙️',
-        env: '⚙️', gitignore: '🔧', dockerfile: '🐳',
+const FileIcon = ({ ext }) => {
+    const colors = {
+        js: '#f0db4f', jsx: '#61dafb', ts: '#3178c6', tsx: '#3178c6',
+        java: '#e76f00', py: '#306998', json: '#a6a6a6', html: '#e34c26',
+        css: '#264de4', scss: '#cc6699', md: '#ffffff', sh: '#89e051',
+        txt: '#cccccc', xml: '#ff6600', yml: '#cb171e', yaml: '#cb171e',
+        env: '#cb171e', gitignore: '#cb171e', dockerfile: '#2496ed',
     };
-    return icons[ext] || '📄';
+    const color = colors[ext] || '#cccccc';
+    return (
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 1H3C2.44772 1 2 1.44772 2 2V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V6L9 1Z" fill="#2d2d2d" stroke={color} strokeWidth="1"/>
+            <path d="M9 1V6H14" fill={color} opacity="0.3"/>
+            <text x="3.5" y="12" fontSize="7" fill={color} fontFamily="monospace" fontWeight="bold">{ext.slice(0,3).toUpperCase()}</text>
+        </svg>
+    );
+};
+
+const getFileIcon = (name) => {
+    if (!name) return <FileIcon ext="" />;
+    const lower = name.toLowerCase();
+    if (lower === 'dockerfile') return <FileIcon ext="dockerfile" />;
+    if (lower === '.gitignore' || lower === '.env') return <FileIcon ext="env" />;
+    const ext = name.split('.').pop()?.toLowerCase();
+    return <FileIcon ext={ext || ''} />;
 };
 
 const TabBar = ({ tabs, activeTab, dirtyTabs, onSelect, onClose }) => {
@@ -105,7 +120,11 @@ const s = {
         color: '#969696',
     },
     tabIcon: {
-        fontSize: '12px',
+        width: '14px',
+        height: '14px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         flexShrink: 0,
     },
     tabName: {

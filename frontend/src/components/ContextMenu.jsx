@@ -88,7 +88,10 @@ const s = {
     icon: {
         fontSize: '14px',
         width: '16px',
-        textAlign: 'center',
+        height: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         flexShrink: 0,
     },
     shortcut: {

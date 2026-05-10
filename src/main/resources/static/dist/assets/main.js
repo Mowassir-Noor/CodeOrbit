@@ -16624,7 +16624,10 @@ const s$2 = {
   icon: {
     fontSize: "14px",
     width: "16px",
-    textAlign: "center",
+    height: "16px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0
   },
   shortcut: {
@@ -16638,49 +16641,86 @@ const s$2 = {
     margin: "4px 0"
   }
 };
-const FILE_ICONS = {
-  js: "🟨",
-  jsx: "⚛️",
-  ts: "🔷",
-  tsx: "⚛️",
-  java: "☕",
-  py: "🐍",
-  json: "📋",
-  html: "🌐",
-  css: "🎨",
-  scss: "🎨",
-  less: "🎨",
-  md: "📝",
-  sh: "🖥️",
-  bash: "🖥️",
-  txt: "📄",
-  xml: "📄",
-  yml: "⚙️",
-  yaml: "⚙️",
-  env: "⚙️",
-  dockerfile: "🐳",
-  rs: "🦀",
-  go: "🐹",
-  rb: "💎",
-  php: "🐘",
-  cs: "🟣",
-  cpp: "⚙️",
-  c: "⚙️",
-  h: "⚙️",
-  vue: "💚",
-  svelte: "🔶",
-  sql: "🗄️",
-  graphql: "💜"
+const FolderIcon = ({ open }) => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+  open ? /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M2 3.5C2 2.67157 2.67157 2 3.5 2H6L7.5 4H12.5C13.3284 4 14 4.67157 14 5.5V12.5C14 13.3284 13.3284 14 12.5 14H3.5C2.67157 14 2 13.3284 2 12.5V3.5Z", fill: "#dcb67a", stroke: "#dcb67a", strokeWidth: "0.5" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M2 2.5C2 1.67157 2.67157 1 3.5 1H6L7.5 3H12.5C13.3284 3 14 3.67157 14 4.5V11.5C14 12.3284 13.3284 13 12.5 13H3.5C2.67157 13 2 12.3284 2 11.5V2.5Z", fill: "#dcb67a", stroke: "#dcb67a", strokeWidth: "0.5" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M2 5L14 5", stroke: "#c59b55", strokeWidth: "0.5", opacity: "0.5" })
+] });
+const FileIcon$1 = ({ ext }) => {
+  const colors = {
+    js: "#f0db4f",
+    jsx: "#61dafb",
+    ts: "#3178c6",
+    tsx: "#3178c6",
+    java: "#e76f00",
+    py: "#306998",
+    json: "#a6a6a6",
+    html: "#e34c26",
+    css: "#264de4",
+    scss: "#cc6699",
+    less: "#1d365d",
+    md: "#ffffff",
+    sh: "#89e051",
+    bash: "#89e051",
+    txt: "#cccccc",
+    xml: "#ff6600",
+    yml: "#cb171e",
+    yaml: "#cb171e",
+    env: "#cb171e",
+    dockerfile: "#2496ed",
+    rs: "#dea584",
+    go: "#00add8",
+    rb: "#cc342d",
+    php: "#777bb4",
+    cs: "#178600",
+    cpp: "#f34b7d",
+    c: "#555555",
+    h: "#555555",
+    vue: "#41b883",
+    svelte: "#ff3e00",
+    sql: "#e38c00",
+    graphql: "#e10098"
+  };
+  const color = colors[ext] || "#cccccc";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 1H3C2.44772 1 2 1.44772 2 2V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V6L9 1Z", fill: "#2d2d2d", stroke: color, strokeWidth: "1" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 1V6H14", fill: color, opacity: "0.3" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "3.5", y: "12", fontSize: "7", fill: color, fontFamily: "monospace", fontWeight: "bold", children: ext.slice(0, 3).toUpperCase() })
+  ] });
 };
 const getFileIcon$1 = (name) => {
   var _a;
-  if (!name) return "📄";
+  if (!name) return /* @__PURE__ */ jsxRuntimeExports.jsx(FileIcon$1, { ext: "" });
   const lower = name.toLowerCase();
-  if (lower === "dockerfile") return "🐳";
-  if (lower === ".gitignore" || lower === ".env") return "🔧";
+  if (lower === "dockerfile") return /* @__PURE__ */ jsxRuntimeExports.jsx(FileIcon$1, { ext: "dockerfile" });
+  if (lower === ".gitignore" || lower === ".env") return /* @__PURE__ */ jsxRuntimeExports.jsx(FileIcon$1, { ext: "env" });
   const ext = (_a = name.split(".").pop()) == null ? void 0 : _a.toLowerCase();
-  return FILE_ICONS[ext] || "📄";
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(FileIcon$1, { ext: ext || "" });
 };
+const NewFileSvg = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 1H3C2.44772 1 2 1.44772 2 2V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V6L9 1Z", fill: "#2d2d2d", stroke: "#cccccc", strokeWidth: "1" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 1V6H14", fill: "#cccccc", opacity: "0.4" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M6 11H10M8 9V13", stroke: "#cccccc", strokeWidth: "1", strokeLinecap: "round" })
+] });
+const NewFolderSvg = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M2 2.5C2 1.67157 2.67157 1 3.5 1H6L7.5 3H12.5C13.3284 3 14 3.67157 14 4.5V11.5C14 12.3284 13.3284 13 12.5 13H3.5C2.67157 13 2 12.3284 2 11.5V2.5Z", fill: "#dcb67a", stroke: "#c59b55", strokeWidth: "0.8" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M6 11H10M8 9V13", stroke: "#fff", strokeWidth: "1", strokeLinecap: "round" })
+] });
+const EditSvg = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M11.5 2L14 4.5L5 13.5L2.5 11L11.5 2Z", stroke: "#cccccc", strokeWidth: "1.2", fill: "none" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M2 14L3 11L5 13L2 14Z", fill: "#cccccc" })
+] });
+const CopySvg = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("rect", { x: "4", y: "4", width: "8", height: "10", rx: "1", stroke: "#cccccc", strokeWidth: "1.2", fill: "none" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M4 12H2.5C2.22386 12 2 11.7761 2 11.5V2.5C2 2.22386 2.22386 2 2.5 2H10.5C10.7761 2 11 2.22386 11 2.5V4", stroke: "#cccccc", strokeWidth: "1.2", fill: "none" })
+] });
+const TrashSvg = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M3 4H13M6 4V3C6 2.44772 6.44772 2 7 2H9C9.55228 2 10 2.44772 10 3V4M7 7V11M9 7V11", stroke: "#f48771", strokeWidth: "1.2", strokeLinecap: "round" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M5 4L5.5 13C5.5 13.5523 5.94772 14 6.5 14H9.5C10.0523 14 10.5 13.5523 10.5 13L11 4", stroke: "#f48771", strokeWidth: "1.2" })
+] });
+const GenericFileSvg = () => /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "16", height: "16", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 1H3C2.44772 1 2 1.44772 2 2V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V6L9 1Z", fill: "#2d2d2d", stroke: "#a0a0a0", strokeWidth: "1" }),
+  /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 1V6H14", fill: "#a0a0a0", opacity: "0.3" })
+] });
 const InlineInput = ({ defaultValue = "", onConfirm, onCancel, style }) => {
   const [value, setValue] = reactExports.useState(defaultValue);
   const inputRef = reactExports.useRef(null);
@@ -16794,7 +16834,7 @@ const TreeNode = reactExports.memo(({
         onClick: handleClick,
         children: [
           isDir ? /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: s$1.arrow, children: isExpanded ? "▾" : "▸" }) : /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: s$1.arrowPlaceholder }),
-          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: s$1.icon, children: isDir ? isExpanded ? "📂" : "📁" : getFileIcon$1(node.name) }),
+          /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: s$1.icon, children: isDir ? /* @__PURE__ */ jsxRuntimeExports.jsx(FolderIcon, { open: isExpanded }) : getFileIcon$1(node.name) }),
           isRenaming ? /* @__PURE__ */ jsxRuntimeExports.jsx(
             InlineInput,
             {
@@ -16833,7 +16873,7 @@ const TreeNode = reactExports.memo(({
         child.id
       )),
       creatingUnder === node.id && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { paddingLeft: paddingLeft + 16, display: "flex", alignItems: "center", gap: 4, padding: `2px 8px 2px ${paddingLeft + 16}px` }, children: [
-        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: s$1.icon, children: newNodeType === "DIRECTORY" ? "📁" : "📄" }),
+        /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: s$1.icon, children: newNodeType === "DIRECTORY" ? /* @__PURE__ */ jsxRuntimeExports.jsx(FolderIcon, { open: false }) : /* @__PURE__ */ jsxRuntimeExports.jsx(GenericFileSvg, {}) }),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
           InlineInput,
           {
@@ -16914,23 +16954,23 @@ const FileTree = ({
       y: e.clientY,
       items: [
         ...isDir ? [
-          { icon: "📄", label: "New File", action: () => {
+          { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(NewFileSvg, {}), label: "New File", action: () => {
             setNewNodeType("FILE");
             setCreatingUnder(node.id);
             setExpandedFolders((p2) => /* @__PURE__ */ new Set([...p2, node.id]));
           } },
-          { icon: "📁", label: "New Folder", action: () => {
+          { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(NewFolderSvg, {}), label: "New Folder", action: () => {
             setNewNodeType("DIRECTORY");
             setCreatingUnder(node.id);
             setExpandedFolders((p2) => /* @__PURE__ */ new Set([...p2, node.id]));
           } },
           { separator: true }
         ] : [],
-        { icon: "✏️", label: "Rename", shortcut: "F2", action: () => handleStartRename(node.id) },
+        { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(EditSvg, {}), label: "Rename", shortcut: "F2", action: () => handleStartRename(node.id) },
         { separator: true },
-        { icon: "📋", label: "Copy Path", action: () => navigator.clipboard.writeText(node.filePath) },
+        { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(CopySvg, {}), label: "Copy Path", action: () => navigator.clipboard.writeText(node.filePath) },
         { separator: true },
-        { icon: "🗑️", label: "Delete", shortcut: "Del", danger: true, action: () => {
+        { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(TrashSvg, {}), label: "Delete", shortcut: "Del", danger: true, action: () => {
           setDeleteTarget(node);
           setContextMenu(null);
         } }
@@ -16944,11 +16984,11 @@ const FileTree = ({
       x: e.clientX,
       y: e.clientY,
       items: [
-        { icon: "📄", label: "New File", action: () => {
+        { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(NewFileSvg, {}), label: "New File", action: () => {
           setNewNodeType("FILE");
           setCreatingUnder(null);
         } },
-        { icon: "📁", label: "New Folder", action: () => {
+        { icon: /* @__PURE__ */ jsxRuntimeExports.jsx(NewFolderSvg, {}), label: "New Folder", action: () => {
           setNewNodeType("DIRECTORY");
           setCreatingUnder(null);
         } }
@@ -17008,7 +17048,7 @@ const FileTree = ({
               setNewNodeType("FILE");
               setCreatingUnder(null);
             },
-            children: "📄"
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(NewFileSvg, {})
           }
         ),
         /* @__PURE__ */ jsxRuntimeExports.jsx(
@@ -17020,7 +17060,7 @@ const FileTree = ({
               setNewNodeType("DIRECTORY");
               setCreatingUnder(null);
             },
-            children: "📁"
+            children: /* @__PURE__ */ jsxRuntimeExports.jsx(NewFolderSvg, {})
           }
         )
       ] })
@@ -17034,7 +17074,7 @@ const FileTree = ({
         onDrop: handleRootDrop,
         children: [
           creatingUnder === null && /* @__PURE__ */ jsxRuntimeExports.jsxs("div", { style: { display: "flex", alignItems: "center", gap: 4, padding: "2px 8px" }, children: [
-            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: s$1.icon, children: newNodeType === "DIRECTORY" ? "📁" : "📄" }),
+            /* @__PURE__ */ jsxRuntimeExports.jsx("span", { style: s$1.icon, children: newNodeType === "DIRECTORY" ? /* @__PURE__ */ jsxRuntimeExports.jsx(FolderIcon, { open: false }) : /* @__PURE__ */ jsxRuntimeExports.jsx(GenericFileSvg, {}) }),
             /* @__PURE__ */ jsxRuntimeExports.jsx(
               InlineInput,
               {
@@ -17254,31 +17294,43 @@ const s$1 = {
     fontWeight: 600
   }
 };
+const FileIcon = ({ ext }) => {
+  const colors = {
+    js: "#f0db4f",
+    jsx: "#61dafb",
+    ts: "#3178c6",
+    tsx: "#3178c6",
+    java: "#e76f00",
+    py: "#306998",
+    json: "#a6a6a6",
+    html: "#e34c26",
+    css: "#264de4",
+    scss: "#cc6699",
+    md: "#ffffff",
+    sh: "#89e051",
+    txt: "#cccccc",
+    xml: "#ff6600",
+    yml: "#cb171e",
+    yaml: "#cb171e",
+    env: "#cb171e",
+    gitignore: "#cb171e",
+    dockerfile: "#2496ed"
+  };
+  const color = colors[ext] || "#cccccc";
+  return /* @__PURE__ */ jsxRuntimeExports.jsxs("svg", { width: "14", height: "14", viewBox: "0 0 16 16", fill: "none", xmlns: "http://www.w3.org/2000/svg", children: [
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 1H3C2.44772 1 2 1.44772 2 2V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V6L9 1Z", fill: "#2d2d2d", stroke: color, strokeWidth: "1" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("path", { d: "M9 1V6H14", fill: color, opacity: "0.3" }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx("text", { x: "3.5", y: "12", fontSize: "7", fill: color, fontFamily: "monospace", fontWeight: "bold", children: ext.slice(0, 3).toUpperCase() })
+  ] });
+};
 const getFileIcon = (name) => {
   var _a;
-  const ext = (_a = name == null ? void 0 : name.split(".").pop()) == null ? void 0 : _a.toLowerCase();
-  const icons = {
-    js: "🟨",
-    jsx: "⚛️",
-    ts: "🔷",
-    tsx: "⚛️",
-    java: "☕",
-    py: "🐍",
-    json: "📋",
-    html: "🌐",
-    css: "🎨",
-    scss: "🎨",
-    md: "📝",
-    sh: "🖥️",
-    txt: "📄",
-    xml: "📄",
-    yml: "⚙️",
-    yaml: "⚙️",
-    env: "⚙️",
-    gitignore: "🔧",
-    dockerfile: "🐳"
-  };
-  return icons[ext] || "📄";
+  if (!name) return /* @__PURE__ */ jsxRuntimeExports.jsx(FileIcon, { ext: "" });
+  const lower = name.toLowerCase();
+  if (lower === "dockerfile") return /* @__PURE__ */ jsxRuntimeExports.jsx(FileIcon, { ext: "dockerfile" });
+  if (lower === ".gitignore" || lower === ".env") return /* @__PURE__ */ jsxRuntimeExports.jsx(FileIcon, { ext: "env" });
+  const ext = (_a = name.split(".").pop()) == null ? void 0 : _a.toLowerCase();
+  return /* @__PURE__ */ jsxRuntimeExports.jsx(FileIcon, { ext: ext || "" });
 };
 const TabBar = ({ tabs, activeTab, dirtyTabs, onSelect, onClose }) => {
   const scrollRef = reactExports.useRef(null);
@@ -17370,7 +17422,11 @@ const s = {
     color: "#969696"
   },
   tabIcon: {
-    fontSize: "12px",
+    width: "14px",
+    height: "14px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
     flexShrink: 0
   },
   tabName: {

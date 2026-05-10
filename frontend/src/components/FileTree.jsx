@@ -1,24 +1,92 @@
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
 import ContextMenu from './ContextMenu';
 
-// ─── File icon lookup ──────────────────────────────────────────────────────────
-const FILE_ICONS = {
-    js: '🟨', jsx: '⚛️', ts: '🔷', tsx: '⚛️', java: '☕', py: '🐍',
-    json: '📋', html: '🌐', css: '🎨', scss: '🎨', less: '🎨',
-    md: '📝', sh: '🖥️', bash: '🖥️', txt: '📄', xml: '📄',
-    yml: '⚙️', yaml: '⚙️', env: '⚙️', dockerfile: '🐳', rs: '🦀',
-    go: '🐹', rb: '💎', php: '🐘', cs: '🟣', cpp: '⚙️', c: '⚙️',
-    h: '⚙️', vue: '💚', svelte: '🔶', sql: '🗄️', graphql: '💜',
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+const FolderIcon = ({ open }) => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        {open ? (
+            <path d="M2 3.5C2 2.67157 2.67157 2 3.5 2H6L7.5 4H12.5C13.3284 4 14 4.67157 14 5.5V12.5C14 13.3284 13.3284 14 12.5 14H3.5C2.67157 14 2 13.3284 2 12.5V3.5Z" fill="#dcb67a" stroke="#dcb67a" strokeWidth="0.5"/>
+        ) : (
+            <path d="M2 2.5C2 1.67157 2.67157 1 3.5 1H6L7.5 3H12.5C13.3284 3 14 3.67157 14 4.5V11.5C14 12.3284 13.3284 13 12.5 13H3.5C2.67157 13 2 12.3284 2 11.5V2.5Z" fill="#dcb67a" stroke="#dcb67a" strokeWidth="0.5"/>
+        )}
+        <path d="M2 5L14 5" stroke="#c59b55" strokeWidth="0.5" opacity="0.5"/>
+    </svg>
+);
+
+const FileIcon = ({ ext }) => {
+    const colors = {
+        js: '#f0db4f', jsx: '#61dafb', ts: '#3178c6', tsx: '#3178c6',
+        java: '#e76f00', py: '#306998', json: '#a6a6a6', html: '#e34c26',
+        css: '#264de4', scss: '#cc6699', less: '#1d365d',
+        md: '#ffffff', sh: '#89e051', bash: '#89e051', txt: '#cccccc',
+        xml: '#ff6600', yml: '#cb171e', yaml: '#cb171e', env: '#cb171e',
+        dockerfile: '#2496ed', rs: '#dea584', go: '#00add8',
+        rb: '#cc342d', php: '#777bb4', cs: '#178600', cpp: '#f34b7d',
+        c: '#555555', h: '#555555', vue: '#41b883', svelte: '#ff3e00',
+        sql: '#e38c00', graphql: '#e10098',
+    };
+    const color = colors[ext] || '#cccccc';
+    return (
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 1H3C2.44772 1 2 1.44772 2 2V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V6L9 1Z" fill="#2d2d2d" stroke={color} strokeWidth="1"/>
+            <path d="M9 1V6H14" fill={color} opacity="0.3"/>
+            <text x="3.5" y="12" fontSize="7" fill={color} fontFamily="monospace" fontWeight="bold">{ext.slice(0,3).toUpperCase()}</text>
+        </svg>
+    );
 };
 
 const getFileIcon = (name) => {
-    if (!name) return '📄';
+    if (!name) return <FileIcon ext="" />;
     const lower = name.toLowerCase();
-    if (lower === 'dockerfile') return '🐳';
-    if (lower === '.gitignore' || lower === '.env') return '🔧';
+    if (lower === 'dockerfile') return <FileIcon ext="dockerfile" />;
+    if (lower === '.gitignore' || lower === '.env') return <FileIcon ext="env" />;
     const ext = name.split('.').pop()?.toLowerCase();
-    return FILE_ICONS[ext] || '📄';
+    return <FileIcon ext={ext || ''} />;
 };
+
+// ─── Small SVG helpers for header / context menu ─────────────────────────────
+const NewFileSvg = () => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 1H3C2.44772 1 2 1.44772 2 2V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V6L9 1Z" fill="#2d2d2d" stroke="#cccccc" strokeWidth="1"/>
+        <path d="M9 1V6H14" fill="#cccccc" opacity="0.4"/>
+        <path d="M6 11H10M8 9V13" stroke="#cccccc" strokeWidth="1" strokeLinecap="round"/>
+    </svg>
+);
+
+const NewFolderSvg = () => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 2.5C2 1.67157 2.67157 1 3.5 1H6L7.5 3H12.5C13.3284 3 14 3.67157 14 4.5V11.5C14 12.3284 13.3284 13 12.5 13H3.5C2.67157 13 2 12.3284 2 11.5V2.5Z" fill="#dcb67a" stroke="#c59b55" strokeWidth="0.8"/>
+        <path d="M6 11H10M8 9V13" stroke="#fff" strokeWidth="1" strokeLinecap="round"/>
+    </svg>
+);
+
+const EditSvg = () => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.5 2L14 4.5L5 13.5L2.5 11L11.5 2Z" stroke="#cccccc" strokeWidth="1.2" fill="none"/>
+        <path d="M2 14L3 11L5 13L2 14Z" fill="#cccccc"/>
+    </svg>
+);
+
+const CopySvg = () => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="4" width="8" height="10" rx="1" stroke="#cccccc" strokeWidth="1.2" fill="none"/>
+        <path d="M4 12H2.5C2.22386 12 2 11.7761 2 11.5V2.5C2 2.22386 2.22386 2 2.5 2H10.5C10.7761 2 11 2.22386 11 2.5V4" stroke="#cccccc" strokeWidth="1.2" fill="none"/>
+    </svg>
+);
+
+const TrashSvg = () => (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M3 4H13M6 4V3C6 2.44772 6.44772 2 7 2H9C9.55228 2 10 2.44772 10 3V4M7 7V11M9 7V11" stroke="#f48771" strokeWidth="1.2" strokeLinecap="round"/>
+        <path d="M5 4L5.5 13C5.5 13.5523 5.94772 14 6.5 14H9.5C10.0523 14 10.5 13.5523 10.5 13L11 4" stroke="#f48771" strokeWidth="1.2"/>
+    </svg>
+);
+
+const GenericFileSvg = () => (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 1H3C2.44772 1 2 1.44772 2 2V14C2 14.5523 2.44772 15 3 15H13C13.5523 15 14 14.5523 14 14V6L9 1Z" fill="#2d2d2d" stroke="#a0a0a0" strokeWidth="1"/>
+        <path d="M9 1V6H14" fill="#a0a0a0" opacity="0.3"/>
+    </svg>
+);
 
 // ─── Inline Input (for rename / new node) ────────────────────────────────────
 const InlineInput = ({ defaultValue = '', onConfirm, onCancel, style }) => {
@@ -134,7 +202,7 @@ const TreeNode = memo(({
 
                 {/* Icon */}
                 <span style={s.icon}>
-                    {isDir ? (isExpanded ? '📂' : '📁') : getFileIcon(node.name)}
+                    {isDir ? <FolderIcon open={isExpanded} /> : getFileIcon(node.name)}
                 </span>
 
                 {/* Name or inline rename input */}
@@ -178,7 +246,7 @@ const TreeNode = memo(({
                     ))}
                     {creatingUnder === node.id && (
                         <div style={{ paddingLeft: paddingLeft + 16, display: 'flex', alignItems: 'center', gap: 4, padding: `2px 8px 2px ${paddingLeft + 16}px` }}>
-                            <span style={s.icon}>{newNodeType === 'DIRECTORY' ? '📁' : '📄'}</span>
+                            <span style={s.icon}>{newNodeType === 'DIRECTORY' ? <FolderIcon open={false} /> : <GenericFileSvg />}</span>
                             <InlineInput
                                 onConfirm={(name) => onConfirmCreate(name, node.id)}
                                 onCancel={onCancelCreate}
@@ -267,15 +335,15 @@ const FileTree = ({
             y: e.clientY,
             items: [
                 ...(isDir ? [
-                    { icon: '📄', label: 'New File', action: () => { setNewNodeType('FILE'); setCreatingUnder(node.id); setExpandedFolders(p => new Set([...p, node.id])); } },
-                    { icon: '📁', label: 'New Folder', action: () => { setNewNodeType('DIRECTORY'); setCreatingUnder(node.id); setExpandedFolders(p => new Set([...p, node.id])); } },
+                    { icon: <NewFileSvg />, label: 'New File', action: () => { setNewNodeType('FILE'); setCreatingUnder(node.id); setExpandedFolders(p => new Set([...p, node.id])); } },
+                    { icon: <NewFolderSvg />, label: 'New Folder', action: () => { setNewNodeType('DIRECTORY'); setCreatingUnder(node.id); setExpandedFolders(p => new Set([...p, node.id])); } },
                     { separator: true },
                 ] : []),
-                { icon: '✏️', label: 'Rename', shortcut: 'F2', action: () => handleStartRename(node.id) },
+                { icon: <EditSvg />, label: 'Rename', shortcut: 'F2', action: () => handleStartRename(node.id) },
                 { separator: true },
-                { icon: '📋', label: 'Copy Path', action: () => navigator.clipboard.writeText(node.filePath) },
+                { icon: <CopySvg />, label: 'Copy Path', action: () => navigator.clipboard.writeText(node.filePath) },
                 { separator: true },
-                { icon: '🗑️', label: 'Delete', shortcut: 'Del', danger: true, action: () => { setDeleteTarget(node); setContextMenu(null); } },
+                { icon: <TrashSvg />, label: 'Delete', shortcut: 'Del', danger: true, action: () => { setDeleteTarget(node); setContextMenu(null); } },
             ],
         });
     }, [handleStartRename]);
@@ -287,8 +355,8 @@ const FileTree = ({
             x: e.clientX,
             y: e.clientY,
             items: [
-                { icon: '📄', label: 'New File',   action: () => { setNewNodeType('FILE');      setCreatingUnder(null); } },
-                { icon: '📁', label: 'New Folder', action: () => { setNewNodeType('DIRECTORY'); setCreatingUnder(null); } },
+                { icon: <NewFileSvg />, label: 'New File',   action: () => { setNewNodeType('FILE');      setCreatingUnder(null); } },
+                { icon: <NewFolderSvg />, label: 'New Folder', action: () => { setNewNodeType('DIRECTORY'); setCreatingUnder(null); } },
             ],
         });
     }, []);
@@ -341,11 +409,11 @@ const FileTree = ({
                 <div style={s.headerActions}>
                     <button style={s.headerBtn} title="New File (Ctrl+N)"
                         onClick={() => { setNewNodeType('FILE'); setCreatingUnder(null); }}>
-                        📄
+                        <NewFileSvg />
                     </button>
                     <button style={s.headerBtn} title="New Folder"
                         onClick={() => { setNewNodeType('DIRECTORY'); setCreatingUnder(null); }}>
-                        📁
+                        <NewFolderSvg />
                     </button>
                 </div>
             </div>
@@ -360,7 +428,7 @@ const FileTree = ({
                 {/* Root-level new node input */}
                 {creatingUnder === null && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '2px 8px' }}>
-                        <span style={s.icon}>{newNodeType === 'DIRECTORY' ? '📁' : '📄'}</span>
+                        <span style={s.icon}>{newNodeType === 'DIRECTORY' ? <FolderIcon open={false} /> : <GenericFileSvg />}</span>
                         <InlineInput
                             onConfirm={(name) => handleConfirmCreate(name, null)}
                             onCancel={handleCancelCreate}
