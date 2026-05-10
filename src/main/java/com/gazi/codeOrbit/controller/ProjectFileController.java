@@ -15,10 +15,14 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping("/api/files")
 public class ProjectFileController {
+
+    private static final Logger logger = LoggerFactory.getLogger(ProjectFileController.class);
 
     private final ProjectFileService projectFileService;
     private final RoomService roomService;
@@ -71,7 +75,13 @@ public class ProjectFileController {
             @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getCurrentUserId(userDetails);
         roomService.getRoomById(roomId, userId); // throws if no access
-        return ResponseEntity.ok(projectFileService.createNode(roomId, req));
+        try {
+            return ResponseEntity.ok(projectFileService.createNode(roomId, req));
+        } catch (Exception e) {
+            logger.error("Failed to create node: roomId={}, name={}, fileType={}, parentId={}",
+                    roomId, req.getName(), req.getFileType(), req.getParentId(), e);
+            throw e;
+        }
     }
 
     /** Rename a node by ID */
