@@ -38,7 +38,9 @@ public class SecurityConfig {
                                 new org.springframework.security.web.authentication.HttpStatusEntryPoint(
                                         org.springframework.http.HttpStatus.UNAUTHORIZED)))
                 .authorizeHttpRequests(auth -> auth
-                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.FORWARD, jakarta.servlet.DispatcherType.ERROR).permitAll()
+                        .dispatcherTypeMatchers(jakarta.servlet.DispatcherType.FORWARD,
+                                jakarta.servlet.DispatcherType.ERROR)
+                        .permitAll()
                         .requestMatchers("/", "/login", "/register", "/dashboard", "/room/**", "/error")
                         .permitAll()
                         .requestMatchers("/api/auth/**", "/oauth2/**", "/ws/**", "/api/execute/**")
@@ -55,10 +57,18 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        configuration.setAllowedOriginPatterns(List.of(
+                "https://codeorbit-1.onrender.com",
+                "http://localhost:5173",
+                "http://localhost:8080",
+                "http://127.0.0.1:5173",
+                "http://127.0.0.1:8080"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("*"));
+        configuration
+                .setAllowedHeaders(List.of("Authorization", "Content-Type", "Accept", "Origin", "X-Requested-With"));
+        configuration.setExposedHeaders(List.of("Authorization"));
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

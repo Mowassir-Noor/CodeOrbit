@@ -10905,9 +10905,8 @@ const {
   getAdapter,
   mergeConfig
 } = axios;
-const API_URL = "http://localhost:8080";
 const api$1 = axios.create({
-  baseURL: API_URL
+  baseURL: ""
 });
 api$1.interceptors.request.use((config3) => {
   const token = localStorage.getItem("token");
@@ -16358,7 +16357,7 @@ var stomp_umd = { exports: {} };
   });
 })(stomp_umd, stomp_umd.exports);
 var stomp_umdExports = stomp_umd.exports;
-const WS_URL$1 = "http://localhost:8080/ws";
+const WS_URL$1 = `${window.location.protocol}//${window.location.host}/ws`;
 const TOPIC_PREFIX = "/topic/code/";
 const SEND_DEST = "/app/code.send";
 const DEBOUNCE_MS = 350;
@@ -24464,7 +24463,7 @@ const styles$1 = {
     overflow: "hidden"
   }
 };
-const WS_URL = "http://localhost:8080/ws";
+const WS_URL = `${window.location.protocol}//${window.location.host}/ws`;
 function buildTree(flatNodes) {
   const nodeMap = /* @__PURE__ */ new Map();
   flatNodes.forEach((n2) => nodeMap.set(n2.id, { ...n2, children: [] }));
@@ -31279,7 +31278,7 @@ ScrollTrigger.core = {
 _getGSAP() && gsap.registerPlugin(ScrollTrigger);
 const scriptRel = "modulepreload";
 const assetsURL = function(dep) {
-  return "/dist/" + dep;
+  return "/" + dep;
 };
 const seen = {};
 const __vitePreload = function preload(baseModule, deps, importerUrl) {
@@ -32122,6 +32121,18 @@ const StatCard = ({ label, value, icon, color }) => {
     /* @__PURE__ */ jsxRuntimeExports.jsx("span", { className: "text-xs text-gray-500 uppercase tracking-wider font-medium", children: label })
   ] });
 };
+const LoginRedirect = () => {
+  reactExports.useEffect(() => {
+    window.location.href = "/login";
+  }, []);
+  return null;
+};
+const RegisterRedirect = () => {
+  reactExports.useEffect(() => {
+    window.location.href = "/register";
+  }, []);
+  return null;
+};
 const PrivateRoute = ({ children }) => {
   const token = localStorage.getItem("token");
   reactExports.useEffect(() => {
@@ -32134,6 +32145,8 @@ const PrivateRoute = ({ children }) => {
 function App() {
   return /* @__PURE__ */ jsxRuntimeExports.jsx(BrowserRouter, { children: /* @__PURE__ */ jsxRuntimeExports.jsxs(Routes, { children: [
     /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/", element: /* @__PURE__ */ jsxRuntimeExports.jsx(LandingPage, {}) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/login", element: /* @__PURE__ */ jsxRuntimeExports.jsx(LoginRedirect, {}) }),
+    /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/register", element: /* @__PURE__ */ jsxRuntimeExports.jsx(RegisterRedirect, {}) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(Route, { path: "/oauth2-redirect", element: /* @__PURE__ */ jsxRuntimeExports.jsx(OAuth2Redirect, {}) }),
     /* @__PURE__ */ jsxRuntimeExports.jsx(
       Route,
