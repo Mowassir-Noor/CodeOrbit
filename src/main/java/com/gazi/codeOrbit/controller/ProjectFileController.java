@@ -42,9 +42,7 @@ public class ProjectFileController {
         return user.getId();
     }
 
-    /**
-     * Get all nodes (files + folders) for a room — flat list, tree built on client
-     */
+
     @GetMapping("/{roomId}")
     public ResponseEntity<List<ProjectFile>> getFiles(@PathVariable String roomId,
             @AuthenticationPrincipal UserDetails userDetails) {
@@ -54,7 +52,7 @@ public class ProjectFileController {
         return ResponseEntity.ok(projectFileService.getFilesByRoomId(roomId));
     }
 
-    /** Legacy: save file content by path (used by WebSocket code sync) */
+    /** used by WebSocket code sync */
     @PostMapping("/{roomId}")
     public ResponseEntity<Void> saveFile(
             @PathVariable String roomId,
@@ -91,7 +89,7 @@ public class ProjectFileController {
             @Valid @RequestBody RenameRequest req,
             @AuthenticationPrincipal UserDetails userDetails) {
         Long userId = getCurrentUserId(userDetails);
-        // Get the file to find its room, then check access
+        
         ProjectFile file = projectFileService.getNodeById(id);
         roomService.getRoomById(file.getRoomId(), userId); // throws if no access
         return ResponseEntity.ok(projectFileService.renameNode(id, req.getNewName()));
@@ -120,7 +118,6 @@ public class ProjectFileController {
         return ResponseEntity.ok().build();
     }
 
-    /** Legacy: delete by path */
     @DeleteMapping("/{roomId}")
     public ResponseEntity<Void> deleteFile(
             @PathVariable String roomId,
@@ -144,7 +141,7 @@ public class ProjectFileController {
         if (state == null) {
             return ResponseEntity.ok("");
         }
-        // Base64-encode binary Yjs state for JSON transport
+        
         return ResponseEntity.ok(java.util.Base64.getEncoder().encodeToString(state));
     }
 }

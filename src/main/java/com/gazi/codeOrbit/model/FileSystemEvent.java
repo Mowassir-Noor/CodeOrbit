@@ -30,18 +30,14 @@ public class FileSystemEvent {
     /** ID of the affected node */
     private Long id;
 
-    /** Path before the operation (for rename/move/delete) */
+    
     private String oldPath;
 
-    /** Path after the operation (for create/rename/move) */
     private String newPath;
 
-    /** Name segment of the affected node */
     private String name;
 
-    /** New parentId after move */
     private Long parentId;
 
-    /** Content (for create only) */
     private String content;
 }

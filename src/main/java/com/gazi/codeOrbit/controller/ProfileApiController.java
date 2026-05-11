@@ -31,7 +31,7 @@ public class ProfileApiController {
         }
         
         try {
-            // Validate file
+            
             String contentType = file.getContentType();
             if (contentType == null || (!contentType.equals("image/jpeg") && !contentType.equals("image/png") && !contentType.equals("image/webp"))) {
                 return ResponseEntity.badRequest().body("Invalid file type. Only JPG, PNG, and WEBP are allowed.");
@@ -87,15 +87,15 @@ public class ProfileApiController {
         profileData.put("email", user.getEmail());
         profileData.put("provider", user.getProvider());
         profileData.put("hasImage", user.getProfileImage() != null);
-        // Note: You shouldn't send the byte array itself in this JSON
+        
         return ResponseEntity.ok(profileData);
     }
     
-    // Stub for stats and activity
+   
     @GetMapping("/stats")
     public ResponseEntity<?> getStats(@AuthenticationPrincipal UserDetails userDetails) {
         if (userDetails == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        // Since we don't have deep tracking, let's return some mock stats or derived from RoomRepository
+      
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalRooms", 12);
         stats.put("filesCreated", 47);

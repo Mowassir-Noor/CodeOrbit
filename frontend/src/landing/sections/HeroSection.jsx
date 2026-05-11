@@ -21,10 +21,7 @@ function HeroSection() {
   return (
     <section id="hero" className="hero-section landing-section" ref={ref}>
       <div className="hero-content">
-        {/* <div className="hero-badge hero-anim">
-          <span className="dot" />
-          Real-time Collaborative IDE
-        </div> */}
+        
         <h1 className="hero-title hero-anim">
           Code Together,<br />
           <span className="gradient-text">Ship Faster.</span>
